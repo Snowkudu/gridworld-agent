@@ -1,6 +1,5 @@
 import random
 from environment.gridworld import GridWorld
-
 size=10
 
 env = GridWorld(size, 0.3)

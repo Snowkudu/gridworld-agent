@@ -3,7 +3,7 @@ import numpy as np , torch
 from collections import deque
 
 INF=10**9
-actions=[(1, 0), (-1, 0),(0, 1), (0, -1)]
+actions=[(-1, 0), (1, 0),(0, -1), (0, 1)]
 
 class GridWorld :
     def __init__(self, grid_size,obstaclesPercent): #Constructor with randoms start and finish.
@@ -55,6 +55,8 @@ class GridWorld :
     def reset(self): # Place obstacles until we get a solvable grid. Clear grid each attempt.(Start/finish fixed) nyi
         self.initGrid() #init grid with start and finish
         attempts = 0
+        self.currentsteps=0
+        self.reward=0
         while True:
             attempts += 1
             # Clear grid and re-place start/goal
@@ -104,9 +106,7 @@ class GridWorld :
     
     def step(self, action):#Apply action and return new state, reward, and done flag.
         x, y = self.state
-        print("\nCurrent Move:", self.currentsteps, "Out of", self.maxsteps, "\nAction:", action)
         if(self.currentsteps>self.maxsteps):
-            print("Max steps reached, reseting.")
             self.state=self.start_state
             done=True
             self.reward+=-5 #penalty for reaching max steps to encourage shorter paths and avoid loops
@@ -129,10 +129,9 @@ class GridWorld :
         self.state = (x, y)
         done = False
         newdist = self.distance() #compute next step distance
-        print("Distance: ",prevdist,"And New :",newdist)
         if any((self.obstacles == self.state).all(axis=1)):
             shaping += -2  # Penalty and stay still
-            print("Obstacle.")
+            self.render()
             self.state = temp
             done = False
         else:
@@ -169,16 +168,19 @@ class GridWorld :
         print("Max:", torch_state.max().item())
         print(torch_state)
 
-    def next_Action(self):
+    def next_Action(self):#alot of debuug prints.
         dist=self._bfs_distance_from_goal()
         agent_row, agent_col = self.state
         best= None
-        best_direction= dist[agent_row][agent_col]
-        
+        temp=dist[agent_row][agent_col]
+        best_direction = temp
         for action , (dR,dC) in enumerate(actions):
             newRow, newCol = agent_row + dR, agent_col + dC
-            if(0 <= newRow < self.RowMax and 0 <= newCol < self.ColMax):
-                if(dist[newRow][newCol] < best_direction and self.grid[newRow][newCol] != -1):
+            if not (0 <= newRow < self.RowMax and 0 <= newCol < self.ColMax):              
+                continue
+            if(self.grid[newRow][newCol] == -1):              
+                continue
+            if(dist[newRow][newCol] < best_direction):               
                     best_direction= dist[newRow][newCol] #best is used to calc the move that is closer to the goal.
                     best=action
         if best is None : return 0
