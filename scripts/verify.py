@@ -38,16 +38,16 @@ def verify_dataset(path):
        
 
         # 5) legal action rate (single line)
-        ok = 0
-        trials = 200
-        for idx in np.random.choice(states.shape[0], trials, replace=False):
-            g = states[idx].reshape(size, size)
-            r, c = np.argwhere(g == 1)[0]
-            a = int(actions[idx])
-            dr, dc = ACTIONS[a]
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < size and 0 <= nc < size and g[nr, nc] != -1:
-                ok += 1
+    ok = 0
+    trials = 200
+    for idx in np.random.choice(states.shape[0], trials, replace=False):
+        g = states[idx].reshape(size, size)
+        r, c = np.argwhere(g == 1)[0]
+        a = int(actions[idx])
+        dr, dc = ACTIONS[a]
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < size and 0 <= nc < size and g[nr, nc] != -1:
+            ok += 1
     print(f"Legal action rate: {ok}/{trials} ({ok/trials:.3f})")
     print("Invariant check: OK (5 random samples)")
     print(">>> verification complete.")

@@ -34,7 +34,7 @@ def generate_dataset(
             action = OraclePolicy.select_action(env) # will be random at one point, but for now we can use the oracle to generate the dataset
             actions.append(action)
         
-            state = env.grid.flatten().astype(np.float32) # Flatten the grid to a 1D array and convert to float32
+            state = env.state_vector() # Flatten the grid to a 1D array and convert to float32
             states.append(state)
             labels.append(action)
             next_state, reward, done = env.step(action)
@@ -70,8 +70,6 @@ def generate_dataset(
 
     verify_dataset(out_path)  # Verify the dataset after saving
     print(f"Dataset saved to: {out_path}")
-   
-    print(f"Saved dataset: {out_path}")
     print(f"Samples: {states.shape[0]} | Solved episodes: {sovled}/{episodes}")
     print(f"X shape: {states.shape} | y shape: {actions.shape}")
     return states, actions, meta

@@ -26,15 +26,15 @@ class GridWorld :
         self.grid=np.zeros((self.grid_size,self.grid_size))
         self.grid[:]=0
         while(1):
-            start=(np.random.randint(0,self.grid_size-1), np.random.randint(0,self.grid_size-1))
-            finish=(np.random.randint(0,self.grid_size-1), np.random.randint(0,self.grid_size-1))
+            start=(np.random.randint(0,self.grid_size), np.random.randint(0,self.grid_size))
+            finish=(np.random.randint(0,self.grid_size), np.random.randint(0,self.grid_size))
             if start != finish:
                 break
         self.start_state = start
         self.state = self.start_state
         self.goal_state = finish
         self.grid[self.goal_state]=2
-        self.grid[self.start_state]=1
+        #self.grid[self.start_state]=1
          
     def reset(self): # Place obstacles until we get a solvable grid. Clear grid each attempt.(Start/finish fixed) nyi
         self.initGrid() #init grid with start and finish
@@ -47,7 +47,7 @@ class GridWorld :
             # Clear grid and re-place start/goal
             self.grid = np.zeros((self.grid_size, self.grid_size))
             self.grid[self.goal_state] = 2
-            self.grid[self.start_state] = 1
+            #self.grid[self.start_state] = 1
 
             # Generate unique obstacle positions that don't overlap start/goal
             obs_set = set()
@@ -116,20 +116,35 @@ class GridWorld :
             event,
         )
 
-        return self.state, reward, done
-    
-    def state_vector(self) -> np.ndarray:
-        return np.array(self.state, dtype=np.float32).reshape(-1)  
+        return self.state_vector(), reward, done
+
+    def observation_grid(self) -> np.ndarray: # Returns the grid with the agent and goal positions marked.
+        observation = self.grid.copy()
+        goal_row, goal_col = map(int, self.goal_state)
+        agent_row, agent_col = map(int, self.state)
+
+        observation[goal_row, goal_col] = GOAL
+        observation[agent_row, agent_col] = AGENT
+
+        return observation
+
+    def state_vector(self) -> np.ndarray:  #Returns the OBSERVATED GRID (WITH THE AGENT AND GOAL) as a flattened 1D array of float32 values.
+        return self.observation_grid().flatten().astype(np.float32)
     
     def get_state_tensor(self) -> torch.Tensor:
-        temp=self.state_vector()
-        return torch.from_numpy(temp)
+         return torch.tensor(
+            self.observation_grid(),
+            dtype=torch.float32,
+        )
     
-    def debug_tensor(self):
-        np_state = np.array(self.grid, dtype=np.float32)
-        torch_state = torch.from_numpy(np_state)
+    def debug_tensor(self):     # Prints the current state of the grid, the agent's position, the goal's position, and some statistics about the state tensor.
+        np_state = self.observation_grid()
+        torch_state = self.get_state_tensor()
 
         print("Equal:", np.allclose(np_state, torch_state.numpy()))
+        print("State:", self.state)
+        print("Goal:", self.goal_state)
+        print("Agent count:", int((np_state == AGENT).sum()))
         print("Shape:", torch_state.shape)
         print("Min:", torch_state.min().item())
         print("Max:", torch_state.max().item())
