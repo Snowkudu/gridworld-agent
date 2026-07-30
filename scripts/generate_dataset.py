@@ -1,5 +1,8 @@
 from html import parser
 from environment.gridworld import GridWorld
+from environment.rewards import manhattan_shaped_reward
+from scripts.verify import verify_dataset  
+from policies.oracle import OraclePolicy
 import numpy as np
 import os,time,argparse
 print(">>> dataset.py loaded")
@@ -17,6 +20,7 @@ def generate_dataset(
     
     states=[]
     actions=[]
+    labels=[]
     sovled=0
 
 
@@ -26,12 +30,13 @@ def generate_dataset(
         done = False
         episode_data = []
         while not done :
-            
-            action = env.next_Action() # Random action (0-3)
+            oracleAction = OraclePolicy.select_action(env) # bfs policy to get the best action
+            action = OraclePolicy.select_action(env) # will be random at one point, but for now we can use the oracle to generate the dataset
             actions.append(action)
         
             state = env.grid.flatten().astype(np.float32) # Flatten the grid to a 1D array and convert to float32
             states.append(state)
+            labels.append(action)
             next_state, reward, done = env.step(action)
             
             episode_data.append((state, action, reward, next_state, done))
@@ -62,6 +67,9 @@ def generate_dataset(
   
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     np.savez_compressed(out_path, states=states, actions=actions, meta=meta)
+
+    verify_dataset(out_path)  # Verify the dataset after saving
+    print(f"Dataset saved to: {out_path}")
    
     print(f"Saved dataset: {out_path}")
     print(f"Samples: {states.shape[0]} | Solved episodes: {sovled}/{episodes}")
@@ -78,7 +86,7 @@ def main():
      args= parser.parse_args()
      print("Generating dataset..:")
      #init env
-     env=GridWorld(10,0.3)
+     env=GridWorld(10,0.3,manhattan_shaped_reward)
 
      if not args.outpath:
          out_path = f"data/raw/gridworld_{args.episodes}ep_{args.max_steps}ms_{args.seed}seed.npz"

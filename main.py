@@ -1,8 +1,10 @@
 import random
 from environment.gridworld import GridWorld
+from environment.renderer import render
+from environment.rewards import manhattan_shaped_reward
 size=10
 
-env = GridWorld(size, 0.3)
+env = GridWorld(size, 0.3,manhattan_shaped_reward)
 
 state = env.reset()
 done = False
@@ -32,20 +34,20 @@ def read_action():
                 return 2  # Left
             if code == b'M':
                 return 3  # Right
+          
         else:
             if ch in (b'q', b'Q'):
                 return None
 
 
 while not done:
-    env.render()
+    render(env)
     action = read_action()
     if action is None:
         print("Exiting.")
         break
     state, reward, done = env.step(action)
     print("Reward:", reward,"\n")
-   
     s = env.debug_tensor()
 
    
