@@ -9,8 +9,11 @@ __pycache__/
 .vscode/
 
 # Dataset files 
-data/raw/
+# Generated datasets
+data/raw/*.npz
 
+# Keep the directory in Git
+!data/raw/.gitkeep
 # OS files
 .DS_Store
 Thumbs.db

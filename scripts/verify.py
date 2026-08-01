@@ -6,7 +6,13 @@ from pathlib import Path
 
 import numpy as np
 from numpy.typing import NDArray
+from policies.actions import (
 
+    actions as ACTION_DELTAS,
+    AGENT as AGENT_VALUE,
+    GOAL as GOAL_VALUE,
+    OBSTACLE as OBSTACLE_VALUE
+ )
 
 GRID_SIZE = 10
 EXPECTED_FEATURES = GRID_SIZE * GRID_SIZE
@@ -15,24 +21,14 @@ EXPECTED_OBSTACLES = 30
 STATE_DTYPE = np.dtype(np.float32)
 ACTION_DTYPE = np.dtype(np.int64)
 
-AGENT_VALUE = 1
-GOAL_VALUE = 2
-OBSTACLE_VALUE = -1
+
 
 ALLOWED_STATE_VALUES = np.array(
     [OBSTACLE_VALUE, 0, AGENT_VALUE, GOAL_VALUE],
     dtype=STATE_DTYPE,
 )
 
-# Must match the action ordering used by the environment and BFS oracle.
-ACTION_DELTAS: dict[int, tuple[int, int]] = {
-   
-    0: (-1, 0),  # 0: up
-    1: (1, 0),   # 1: down
-    2: (0, -1),  # 2: left
-    3: (0, 1),   # 3: right
 
-}
 
 
 class DatasetValidationError(ValueError):
@@ -133,7 +129,10 @@ def _validate_values(
 
     invalid_action_mask = ~np.isin(
         y,
-        np.fromiter(ACTION_DELTAS, dtype=ACTION_DTYPE),
+        np.fromiter(
+            range(len(ACTION_DELTAS)),
+            dtype=ACTION_DTYPE,
+        )
     )
 
     if invalid_action_mask.any():

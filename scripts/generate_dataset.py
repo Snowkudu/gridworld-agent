@@ -23,7 +23,8 @@ def generate_dataset(
     states=[]
     actions=[]
     labels=[]
-    sovled=0
+    solved=0
+    timed_out=0
 
 
     data = []
@@ -43,9 +44,10 @@ def generate_dataset(
             
             episode_data.append((state, action, reward, next_state, done))
             
-            if(done == True):
-                sovled+=1
-        
+            if done and env.state == env.goal_state:
+                solved += 1
+            if done and env.state != env.goal_state:
+                timed_out += 1
 
         if verbose and (episode + 1) % max(1, episodes // 10) == 0:
             print(f"Episode {episode+1}/{episodes} completed.")
