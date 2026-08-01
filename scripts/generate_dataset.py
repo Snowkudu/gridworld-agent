@@ -1,7 +1,8 @@
 from html import parser
 from environment.gridworld import GridWorld
 from environment.rewards import manhattan_shaped_reward
-from scripts.verify import verify_dataset  
+from policies.actions import ACTION_NAMES
+from scripts.verify import validate_arrays, DatasetValidationError  
 from policies.oracle import OraclePolicy
 import numpy as np
 import os,time,argparse
@@ -13,10 +14,11 @@ def generate_dataset(
     episodes:int,
     out_path:str,
     seed: int | None = None,
+    overwrite: bool = False,
     verbose: bool = True,
+   
 ):
-    if seed is not None:
-        np.random.seed(seed)
+   
     
     states=[]
     actions=[]
@@ -40,7 +42,7 @@ def generate_dataset(
             next_state, reward, done = env.step(action)
             
             episode_data.append((state, action, reward, next_state, done))
-
+            
             if(done == True):
                 sovled+=1
         
@@ -52,23 +54,35 @@ def generate_dataset(
     actions=np.array(actions,dtype=np.int64)   #should be a format of (N,)
 
     meta ={
+        "dataset_version": "gridworld_dataset_v1",
+        "environment_version": "gridworld_env_v1",
+        "reward_version": "manhattan_shaped_v1",
+        "grid_size": getattr(env, "grid_size", "-1"), 
+        "obstacle_density": float(env.obstaclesPercent) ,
+        "obstacle_count": int(env.countobstacles),
+         
         "episodes":episodes,
         "max_steps":env.maxsteps,
         "seed": seed  if seed is not None else "None",
-        "gridSize": getattr(env, "grid_size", "-1"), 
-        "density":  getattr(env, "obstacle_density", "-1.0"),
+        "action_order": tuple(ACTION_NAMES),
+       
         "samples": int(states.shape[0]),
-        "solved": int(sovled),
-        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        "solved_episodes": int(sovled),
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     }
    
    
     #make the file to save the outputs and compress it with some metadata aswell.
   
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    if not overwrite and os.path.exists(out_path):
+     raise FileExistsError(
+         f"Dataset already exists: {out_path}\n"
+        "Pass --overwrite to replace it."
+    )
     np.savez_compressed(out_path, states=states, actions=actions, meta=meta)
 
-    verify_dataset(out_path)  # Verify the dataset after saving
+    validate_arrays(states, actions)  # Verify the dataset after saving
     print(f"Dataset saved to: {out_path}")
     print(f"Samples: {states.shape[0]} | Solved episodes: {sovled}/{episodes}")
     print(f"X shape: {states.shape} | y shape: {actions.shape}")
@@ -80,11 +94,13 @@ def main():
      parser.add_argument("--max_steps", type=int, default=200)
      parser.add_argument("--seed", type=int, default=123)
      parser.add_argument("--outpath", type=str, default="")
+     parser.add_argument("--overwrite", action="store_true")
      parser.add_argument("--verbose", action="store_true")
+     
      args= parser.parse_args()
      print("Generating dataset..:")
      #init env
-     env=GridWorld(10,0.3,manhattan_shaped_reward)
+     env=GridWorld(10,0.3,manhattan_shaped_reward,maxsteps=args.max_steps,seed=args.seed)
 
      if not args.outpath:
          out_path = f"data/raw/gridworld_{args.episodes}ep_{args.max_steps}ms_{args.seed}seed.npz"
@@ -93,7 +109,8 @@ def main():
         episodes=args.episodes,
         out_path=args.outpath if args.outpath else out_path,
         seed=args.seed,
-        verbose=True
+        verbose=args.verbose,
+        overwrite=args.overwrite,
     )
      print("Done.\n")
 if __name__ == "__main__":

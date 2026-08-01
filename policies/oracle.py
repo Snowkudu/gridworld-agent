@@ -1,5 +1,6 @@
-from environment.gridworld import GridWorld,actions
+from environment.gridworld import GridWorld
 from environment.pathfinding import _bfs_distance_from_goal
+from policies.actions import actions,INF, EMPTY, AGENT, GOAL, OBSTACLE
 
 class OraclePolicy:
 

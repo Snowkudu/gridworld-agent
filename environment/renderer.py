@@ -1,12 +1,7 @@
 import environment
 from matplotlib.pyplot import grid
 import numpy as np , torch
-INF=10**9
-actions=[(-1, 0), (1, 0),(0, -1), (0, 1)]
-EMPTY = 0
-AGENT = 1
-GOAL = 2
-OBSTACLE = -1
+from policies.actions import actions,INF, EMPTY, AGENT, GOAL, OBSTACLE
 
 #def render(s: 'environment.Gridworld'):  # Outputs the grid.
 #        grid = np.full((s.grid_size, s.grid_size), "0", dtype=str)

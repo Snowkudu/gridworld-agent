@@ -1,7 +1,7 @@
 from collections import deque 
 import numpy as np
-INF=10**9
-actions=[(-1, 0), (1, 0),(0, -1), (0, 1)]   
+from policies.actions import INF, EMPTY, AGENT, GOAL, OBSTACLE,actions
+
 
 def isSolvable(grid):   # Check if the grid is solvable using BFS from start to goal while avoiding obstacles.
                             # Init double ended q with row and col as size then a bfs.

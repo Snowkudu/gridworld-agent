@@ -7,9 +7,10 @@ def sparse_reward(
     if event == "goal":
         return 10.0
 
-    if event == "illegal_move":
+    if event == "illegal_move" or event == "obstacle_hit":
         return -2.0
-
+    if event == "timeout":
+        return -5
     return -1.0
 
 def manhattan_distance(position, goal) -> int:
@@ -24,8 +25,11 @@ def manhattan_shaped_reward(
     if event == "goal":
         return 10.0
 
-    if event == "illegal_move":
+    if event == "illegal_move" or event == "obstacle_hit":
         return -2.0
+
+    if event == "timeout":
+        return -5.0
 
     old_distance = manhattan_distance(previous_position, goal)
     new_distance = manhattan_distance(current_position, goal)

@@ -3,31 +3,27 @@ import numpy as np , torch
 from collections import deque
 
 from environment.pathfinding import isSolvable
-from scripts.verify import ACTIONS
-
-INF=10**9
-actions=[(-1, 0), (1, 0),(0, -1), (0, 1)]
-EMPTY = 0
-AGENT = 1
-GOAL = 2
-OBSTACLE = -1
+from policies.actions import actions,INF,EMPTY,AGENT,GOAL,OBSTACLE
 
 class GridWorld :
-    def __init__(self, grid_size,obstaclesPercent,rewards_fn): #Constructor with randoms start and finish.
+    def __init__(self, grid_size,obstaclesPercent,rewards_fn,maxsteps,seed: int | None=None): #Constructor with randoms start and finish.
         self.reward = 0
         self.grid_size = grid_size
         self.RowMax, self.ColMax = grid_size, grid_size
         self.countobstacles = int( (grid_size* grid_size )*obstaclesPercent)
-        self.maxsteps=grid_size*grid_size
+        self.obstaclesPercent = obstaclesPercent
+        self.maxsteps=maxsteps  
         self.currentsteps=0  
         self.reward_fn=rewards_fn
+        self.seed = seed
+        self.rng = np.random.default_rng(self.seed) 
 
     def initGrid(self): #Init an empty grid with start and finish.
         self.grid=np.zeros((self.grid_size,self.grid_size))
         self.grid[:]=0
         while(1):
-            start=(np.random.randint(0,self.grid_size), np.random.randint(0,self.grid_size))
-            finish=(np.random.randint(0,self.grid_size), np.random.randint(0,self.grid_size))
+            start=(self.rng.integers(0,self.grid_size), self.rng.integers(0,self.grid_size))
+            finish=(self.rng.integers(0,self.grid_size), self.rng.integers(0,self.grid_size))
             if start != finish:
                 break
         self.start_state = start
@@ -52,8 +48,8 @@ class GridWorld :
             # Generate unique obstacle positions that don't overlap start/goal
             obs_set = set()
             while len(obs_set) < self.countobstacles:
-                r = np.random.randint(0, self.grid_size)
-                c = np.random.randint(0, self.grid_size)
+                r = self.rng.integers(0, self.grid_size)
+                c = self.rng.integers(0, self.grid_size)
                 if (r, c) == self.start_state or (r, c) == self.goal_state:
                     continue
                 obs_set.add((r, c))
@@ -97,18 +93,25 @@ class GridWorld :
 
         if candidate == self.goal_state:
             return candidate, "goal"
-
+        
         return candidate, "moved"
 
     def step(self, action):#Apply action and return new state, reward, and done flag.
         previous_position = self.state
+        self.currentsteps += 1
         
         new_position, event = self._verify_action(action)
 
         self.state = new_position
         self.agent_row, self.agent_col = self.state 
-        done =event =="goal"
-
+        if event == "goal":
+            done = True
+        elif self.currentsteps >= self.maxsteps:
+            event = "timeout"
+            done = True
+        else:
+            done = False
+        
         reward = self.reward_fn(
             previous_position,
             new_position,

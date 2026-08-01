@@ -4,7 +4,7 @@ from environment.renderer import render
 from environment.rewards import manhattan_shaped_reward
 size=10
 
-env = GridWorld(size, 0.3,manhattan_shaped_reward)
+env = GridWorld(size, 0.3,manhattan_shaped_reward,50)
 
 state = env.reset()
 done = False
