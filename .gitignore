@@ -11,6 +11,7 @@ __pycache__/
 # Dataset files 
 # Generated datasets
 data/raw/*.npz
+data/models/*.pt
 
 # Keep the directory in Git
 !data/raw/.gitkeep
