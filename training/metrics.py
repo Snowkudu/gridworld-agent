@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Subset
 
 
-def save_json(path: str | Path,payload:torch.dist[str, Any]) -> None:
+def save_json(path: str | Path,payload:dict[str, Any]) -> None:
     """Save a dictionary as a JSON file."""
     outputpath = Path(path)
     outputpath.parent.mkdir(parents=True, exist_ok=True)

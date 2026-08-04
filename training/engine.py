@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import torch
-from torch import nn,inference_mode
+from torch import inference_mode, nn
 from torch.utils.data import DataLoader
 
 

@@ -7,10 +7,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.verify import DatasetValidationError, validate_arrays
-from environment.gridworld import GridWorld, GOAL, OBSTACLE
+from environment.gridworld import GOAL, OBSTACLE, GridWorld
 from environment.rewards import manhattan_shaped_reward
-
+from scripts.verify import DatasetValidationError, validate_arrays
 
 GRID_SIZE = 10
 OBSTACLE_COUNT = 30
@@ -361,8 +360,6 @@ def test_cli_returns_nonzero_for_invalid_dataset(
 
 
     
-from environment.gridworld import GridWorld, GOAL, OBSTACLE
-from environment.rewards import manhattan_shaped_reward
 
 
 UP = 0

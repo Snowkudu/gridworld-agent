@@ -1,6 +1,7 @@
 from environment.gridworld import GridWorld
 from environment.renderer import render
 from environment.rewards import manhattan_shaped_reward
+
 size=10
 
 env = GridWorld(size, 0.3,manhattan_shaped_reward,50)
@@ -11,7 +12,7 @@ done = False
 def read_action():
     try:
         import msvcrt
-    except Exception:
+    except ImportError:
         # Fallback to numeric input if msvcrt is not available
         while True:
             s = input("Move (0-3): ")

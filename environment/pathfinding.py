@@ -1,5 +1,7 @@
-from collections import deque 
+from collections import deque
+
 import numpy as np
+
 from policies.actions import INF, actions
 
 
@@ -20,9 +22,13 @@ def _bfs_distance_from_goal(grid) -> np.ndarray: # Returns an array with distanc
             temp_row,temp_col= queue.popleft()
             for itR,itC in actions:
                 newRow,newCol= temp_row+itR , temp_col+itC
-                if(0 <= newRow < grid.RowMax and 0 <= newCol < grid.ColMax):
-                    if(tempgrid[newRow][newCol] != -1 ):
-                       if(dist_array[newRow][newCol] > dist_array[temp_row][temp_col]+1):   
-                            dist_array[newRow][newCol] = dist_array[temp_row][temp_col]+1
-                            queue.append((newRow,newCol))
+                if (
+                        0 <= newRow < grid.RowMax
+                        and 0 <= newCol < grid.ColMax
+                        and tempgrid[newRow][newCol] != -1
+                        and dist_array[newRow][newCol]
+                        > dist_array[temp_row][temp_col] + 1
+                    ):  
+                        dist_array[newRow][newCol] = dist_array[temp_row][temp_col]+1
+                        queue.append((newRow,newCol))
         return dist_array               

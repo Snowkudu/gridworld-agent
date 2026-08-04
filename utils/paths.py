@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 def project_root() -> Path:
     """
     Returns the repository root by walking upward until it finds a marker file/folder.

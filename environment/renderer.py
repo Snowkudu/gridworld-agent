@@ -1,5 +1,6 @@
 from policies.actions import OBSTACLE
 
+
 def render(self) -> None:
     agent_position = tuple(self.state)
     goal_position = tuple(self.goal_state)

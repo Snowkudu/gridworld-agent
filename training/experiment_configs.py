@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Any
+
 ExperimentConfig= dict[str,Any]
 
 SWEEP_CONFIG :list[ExperimentConfig]=[
@@ -156,12 +158,23 @@ FINAL_CONFIG : ExperimentConfig={
     "min_delta": 1e-4,
     }
 
+TRAINING_DEFAULTS: ExperimentConfig = {
+    "max_epochs": 50,
+    "patience": 8,
+    "min_delta": 0.0,
+}
 
+
+def resolve_config(config:ExperimentConfig)->ExperimentConfig:
+    return{
+        **TRAINING_DEFAULTS,
+        **config,
+    }
 
 def get_experiment_configs(config_set:str)->list[ExperimentConfig]:
     if config_set== "final":
-        return [FINAL_CONFIG.copy()]
+        return [resolve_config(FINAL_CONFIG.copy())]
     if config_set== "sweep":
-        return [config.copy() for config in SWEEP_CONFIG ]
+        return [resolve_config(config.copy()) for config in SWEEP_CONFIG ]
     
     raise ValueError("Uknown config, expected sweep or final.")

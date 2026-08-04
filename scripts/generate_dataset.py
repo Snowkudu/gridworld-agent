@@ -1,10 +1,15 @@
+import argparse
+import os
+import time
+
+import numpy as np
+
 from environment.gridworld import GridWorld
 from environment.rewards import manhattan_shaped_reward
 from policies.actions import ACTION_NAMES
-from scripts.verify import validate_arrays  
 from policies.oracle import OraclePolicy
-import numpy as np
-import os,time,argparse
+from scripts.verify import validate_arrays
+
 print(">>> dataset.py loaded")
 
 
@@ -26,13 +31,12 @@ def generate_dataset(
     timed_out=0
 
 
-    data = []
     for episode in range(episodes):
         state = env.reset()
         done = False
         episode_data = []
         while not done :
-            oracleAction = OraclePolicy.select_action(env) # bfs policy to get the best action
+          
             action = OraclePolicy.select_action(env) # will be random at one point, but for now we can use the oracle to generate the dataset
             actions.append(action)
         
@@ -68,7 +72,7 @@ def generate_dataset(
         "action_order": tuple(ACTION_NAMES),
        
         "samples": int(states.shape[0]),
-        "solved_episodes": int(sovled),
+        "solved_episodes": int(solved),
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     }
    
@@ -85,7 +89,7 @@ def generate_dataset(
 
     validate_arrays(states, actions)  # Verify the dataset after saving
     print(f"Dataset saved to: {out_path}")
-    print(f"Samples: {states.shape[0]} | Solved episodes: {sovled}/{episodes}")
+    print(f"Samples: {states.shape[0]} | Solved episodes: {solved}/{episodes}")
     print(f"X shape: {states.shape} | y shape: {actions.shape}")
     return states, actions, meta
    
@@ -105,7 +109,7 @@ def main():
 
      if not args.outpath:
          out_path = f"data/raw/gridworld_{args.episodes}ep_{args.max_steps}ms_{args.seed}seed.npz"
-     x,y,meta=generate_dataset(
+     generate_dataset(
         env=env,
         episodes=args.episodes,
         out_path=args.outpath if args.outpath else out_path,

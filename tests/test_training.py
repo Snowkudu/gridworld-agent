@@ -8,8 +8,6 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from models.mlp import MLP
 from training.engine import evaluate, train_one_epoch
-import pytest
-from torch import nn
 
 DEVICE = torch.device("cpu")
 

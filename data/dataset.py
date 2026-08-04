@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
 import torch
-from torch.utils.data import TensorDataset,random_split
-from scripts.verify import load_dataset, DatasetValidationError
+from torch.utils.data import TensorDataset, random_split
+
+from scripts.verify import DatasetValidationError, load_dataset
 
 
 @dataclass(frozen=True)

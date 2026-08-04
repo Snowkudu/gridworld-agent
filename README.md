@@ -95,7 +95,7 @@ P2 trains an MLP to imitate the BFS expert policy using the canonical labelled d
 | Validation accuracy | `47.03%` |
 | Test loss | `1.1486` |
 | Test accuracy | `45.12%` |
-| Majority-class baseline | `26.54%` |
+| Majority-class baseline | `26.12%` |
 
 The MLP performs above the majority-class baseline and learns useful state-to-action structure. Classification accuracy alone does not show whether the policy can complete full episodes, so P3 evaluates the selected model through environment rollouts and adds a minimal Pygame viewer for inspecting failures.
 

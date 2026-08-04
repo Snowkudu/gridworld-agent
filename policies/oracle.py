@@ -1,6 +1,7 @@
 from environment.pathfinding import _bfs_distance_from_goal
 from policies.actions import actions
 
+
 class OraclePolicy:
 
      def select_action(grid):   #returns the best action to take based on the current state of the grid, closer to the goal.

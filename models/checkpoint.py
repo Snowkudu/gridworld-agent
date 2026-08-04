@@ -1,8 +1,10 @@
 from pathlib import Path
+from typing import Any
+
+import torch
 
 from models.mlp import MLP
-import torch
-from typing import Any
+
 
 def build_model_from_config(
     config: dict[str,Any]        
@@ -26,7 +28,7 @@ def load_model_from_checkpoint(
         weights_only=False,
     )
     if not isinstance(checkpoint, dict):
-        raise ValueError(
+        raise TypeError(
         f"Checkpoint {checkpoint_path} must contain a dictionary."
     )
 

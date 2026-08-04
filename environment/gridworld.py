@@ -1,7 +1,9 @@
-import numpy as np , torch
+import numpy as np
+import torch
 
 from environment.pathfinding import isSolvable
-from policies.actions import actions,AGENT,GOAL,OBSTACLE
+from policies.actions import AGENT, GOAL, OBSTACLE, actions
+
 
 class GridWorld :
     def __init__(self, grid_size,obstaclesPercent,rewards_fn,maxsteps,seed: int | None=None): #Constructor with randoms start and finish.

@@ -1,42 +1,41 @@
-
 from __future__ import annotations
+
 import argparse
 from pathlib import Path
+
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch.utils.data import DataLoader
+
+from data.dataset import extract_dataset_torch, split_dataset
 from models.checkpoint import load_model_from_checkpoint
 from models.mlp import MLP
-from training.engine import train_one_epoch, evaluate
-from training.experiment_configs import  get_experiment_configs
-from training.metrics import save_json
-from data.dataset import extract_dataset_torch, split_dataset
 from training.engine import (
     collect_action_diagnostics,
     evaluate,
     train_one_epoch,
 )
+from training.experiment_configs import get_experiment_configs
 from training.metrics import (
     calculate_majority_baseline,
     save_json,
 )
-from utils.reproducibility import create_generator,seed_everything
-
+from utils.reproducibility import create_generator, seed_everything
 
 
 def save_selected_model_diagnostics(
     model:nn.Module,
-    validation_loader:DataLoader,
+    
     test_loader:DataLoader,
     device:torch.device,
     checkpoint:dict,
     majority_baseline:dict,
     root:Path,
 )->None:
-    validation_diagnostics= collect_action_diagnostics(model=model,data_loader=validation_loader,device=device,)
+    
     test_diagnostics= collect_action_diagnostics(model=model,data_loader=test_loader,device=device,)
-    experiment_name= checkpoint["experiment_name"]
+    
     for action,accuracy in enumerate(test_diagnostics["per_action_accuracy"]):
         true_count=test_diagnostics["true_action_counts"][action]
         predicted_count=test_diagnostics["predicted_action_counts"][action]
@@ -129,13 +128,15 @@ def main() -> int:
         best_val_accuracy = 0.0
         best_epoch = 0
 
-        patience=8
-        min_delta=0.0
+        max_epochs = int(config["max_epochs"])
+        patience = int(config["patience"])
+        min_delta = float(config["min_delta"])
+
 
         run_dir=artifact_root/experiment_name
         run_dir.mkdir(parents=True,exist_ok=True)
 
-      #  checkpoint_path = checkpoint_dir / f"{experiment_name}.pt"
+    
         checkpoint_path= run_dir / "best_model.pt"
         metrics_path= run_dir / "metrics.json"
 
@@ -160,7 +161,7 @@ def main() -> int:
 
 
 
-        for epoch in range(1, epochs+1):
+        for epoch in range(1, max_epochs+1):
             train_loss, train_accuracy = train_one_epoch(
                 model=model,
                 data_loader=train_loader,
@@ -227,7 +228,7 @@ def main() -> int:
                 f"val loss={validation_loss:.4f}, "
                 f"val acc={validation_accuracy:.2%}"
                 )
-        metrics_path = checkpoint_dir / f"{experiment_name}_metrics.json"
+       
         save_json(
             metrics_path,
             {
@@ -291,7 +292,7 @@ def main() -> int:
         map_location=device
         )
 
-    best_config= checkpoint["config"]
+
 
     best_model, best_checkpoint = load_model_from_checkpoint(
     checkpoint_path=best_result["checkpoint_path"],
@@ -306,7 +307,7 @@ def main() -> int:
     )
     save_selected_model_diagnostics(
         model=best_model,
-        validation_loader=val_loader,
+        
         test_loader=test_loader,
         device=device,
         checkpoint=checkpoint,

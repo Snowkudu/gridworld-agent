@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from pathlib import Path
-from data.dataset import extract_dataset_torch, split_dataset, DatasetSplits
+
 import torch
 from torch import nn
 
+from data.dataset import DatasetSplits, extract_dataset_torch, split_dataset
 
 
 class MLP(nn.Module):
@@ -61,10 +63,6 @@ def load_splits(dataset_path: Path,seed: int) -> DatasetSplits:
 
 def main() -> int:
     
-    path = Path(__file__).parent.parent / "data" / "raw" / "gridworld_2000ep_200ms_123seed.npz"
-    
-    splits=load_splits(path,123)
-
     model = MLP()
     example_states = torch.zeros(
         size=(32, 100),

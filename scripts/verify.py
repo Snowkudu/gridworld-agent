@@ -6,13 +6,11 @@ from pathlib import Path
 
 import numpy as np
 from numpy.typing import NDArray
-from policies.actions import (
 
-    actions as ACTION_DELTAS,
-    AGENT as AGENT_VALUE,
-    GOAL as GOAL_VALUE,
-    OBSTACLE as OBSTACLE_VALUE
- )
+from policies.actions import AGENT as AGENT_VALUE
+from policies.actions import GOAL as GOAL_VALUE
+from policies.actions import OBSTACLE as OBSTACLE_VALUE
+from policies.actions import actions as ACTION_DELTAS
 
 GRID_SIZE = 10
 EXPECTED_FEATURES = GRID_SIZE * GRID_SIZE

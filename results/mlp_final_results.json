@@ -4,15 +4,18 @@
   "split_seed": 123,
   "experiment_seed": 123,
   "selected_config": {
-    "name": "mlp_256_128_bs16_lr3e-4_do10",
+    "max_epochs": 50,
+    "patience": 8,
+    "min_delta": 0.0001,
+    "name": "mlp_256_128_bs16_lr3e-4_do0.10",
     "hidden_sizes": [
       256,
       128
     ],
     "batch_size": 16,
     "learning_rate": 0.0003,
-    "weight_decay": 0.0,
-    "dropout": 0.1
+    "dropout": 0.1,
+    "weight_decay": 0.0
   },
   "best_epoch": 8,
   "validation_loss": 1.1247778328579203,
