@@ -1,0 +1,22 @@
+{
+  "phase": "P2",
+  "dataset": "gridworld_2000ep_200ms_123seed.npz",
+  "split_seed": 123,
+  "experiment_seed": 123,
+  "selected_config": {
+    "name": "mlp_256_128_bs16_lr3e-4_do10",
+    "hidden_sizes": [
+      256,
+      128
+    ],
+    "batch_size": 16,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0,
+    "dropout": 0.1
+  },
+  "best_epoch": 8,
+  "validation_loss": 1.1247778328579203,
+  "validation_accuracy": 0.47030593881223753,
+  "test_loss": 1.148629030579932,
+  "test_accuracy": 0.451168364289994
+}

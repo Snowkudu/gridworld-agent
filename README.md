@@ -4,7 +4,9 @@ A staged machine-learning project that begins with supervised imitation of a BFS
 
 ## Current status
 
-P1 is complete: the environment, oracle policy, dataset generator, dataset validator, and initial automated tests are frozen as version 1.
+- **P1 complete:** the environment, oracle policy, canonical dataset, dataset validator, and contract tests are frozen as version 1.
+- **P2 complete:** the supervised MLP baseline, experiment sweep, checkpoint reconstruction, training diagnostics, and automated tests are implemented.
+- **Current test result:** `45 passed`.
 
 ## P1 environment contract
 
@@ -55,6 +57,56 @@ e5e210983c9e3116b6acd6cde81b12f73aff2142a415fdba89dfb32c7e43c75f
 
 Generated datasets are excluded from Git and can be reproduced from source.
 
+## P2 supervised MLP baseline
+
+P2 trains an MLP to imitate the BFS expert policy using the canonical labelled dataset.
+
+### Method
+
+- Deterministic 80/10/10 train, validation, and test split
+- Configurable fully connected MLP with ReLU activations
+- Cross-entropy classification loss
+- Adam optimizer
+- Validation-loss checkpoint selection
+- Early stopping
+- Fixed split and experiment seeds
+- Checkpoint reconstruction from the saved model configuration
+- Final test evaluation only after model selection
+
+### Selected configuration
+
+| Parameter | Value |
+|---|---:|
+| Hidden layers | `256, 128` |
+| Batch size | `16` |
+| Learning rate | `3e-4` |
+| Dropout | `0.10` |
+| Weight decay | `0.0` |
+| Maximum epochs | `50` |
+| Early-stopping patience | `8` |
+| Minimum improvement | `1e-4` |
+
+### Results
+
+| Metric | Result |
+|---|---:|
+| Best epoch | `8` |
+| Validation loss | `1.1248` |
+| Validation accuracy | `47.03%` |
+| Test loss | `1.1486` |
+| Test accuracy | `45.12%` |
+| Majority-class baseline | `26.54%` |
+
+The MLP performs above the majority-class baseline and learns useful state-to-action structure. Classification accuracy alone does not show whether the policy can complete full episodes, so P3 evaluates the selected model through environment rollouts and adds a minimal Pygame viewer for inspecting failures.
+
+The compact committed result is stored in:
+
+```text
+results/mlp_final_results.json
+```
+
+Generated checkpoints and raw experiment artifacts are excluded from Git.
+
 ## Commands
 
 Generate the canonical dataset:
@@ -75,19 +127,29 @@ Validate the dataset:
 python -m scripts.verify data/raw/gridworld_2000ep_200ms_123seed.npz
 ```
 
-Run tests:
+Run the frozen P2 configuration:
+
+```powershell
+python -m training.train_mlp
+```
+
+Run the full P2 experiment sweep:
+
+```powershell
+python -m training.train_mlp --config-set sweep
+```
+
+Run all tests:
 
 ```powershell
 python -m pytest -v
 ```
 
-Current result: `28 passed`.
+## Roadmap
 
-## TODO:
-
-- P1: environment and dataset contract
-- P2: supervised MLP baseline and training metrics
-- P3: evaluation and minimal Pygame rollout viewer
-- P4: CNN implementation and MLP/CNN comparison
-- P5: DQN reinforcement learning
-- P6: supervised-to-RL transfer experiments
+- [x] P1: environment and dataset contract
+- [x] P2: supervised MLP baseline and training metrics
+- [ ] P3: evaluation and minimal Pygame rollout viewer
+- [ ] P4: CNN implementation and MLP/CNN comparison
+- [ ] P5: DQN reinforcement learning
+- [ ] P6: supervised-to-RL transfer experiments

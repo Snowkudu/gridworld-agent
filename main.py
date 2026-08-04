@@ -1,4 +1,3 @@
-import random
 from environment.gridworld import GridWorld
 from environment.renderer import render
 from environment.rewards import manhattan_shaped_reward

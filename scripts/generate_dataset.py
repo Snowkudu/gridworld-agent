@@ -1,8 +1,7 @@
-from html import parser
 from environment.gridworld import GridWorld
 from environment.rewards import manhattan_shaped_reward
 from policies.actions import ACTION_NAMES
-from scripts.verify import validate_arrays, DatasetValidationError  
+from scripts.verify import validate_arrays  
 from policies.oracle import OraclePolicy
 import numpy as np
 import os,time,argparse

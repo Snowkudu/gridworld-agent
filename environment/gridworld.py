@@ -1,9 +1,7 @@
-from matplotlib.pyplot import grid
 import numpy as np , torch
-from collections import deque
 
 from environment.pathfinding import isSolvable
-from policies.actions import actions,INF,EMPTY,AGENT,GOAL,OBSTACLE
+from policies.actions import actions,AGENT,GOAL,OBSTACLE
 
 class GridWorld :
     def __init__(self, grid_size,obstaclesPercent,rewards_fn,maxsteps,seed: int | None=None): #Constructor with randoms start and finish.

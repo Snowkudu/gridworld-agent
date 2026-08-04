@@ -1,8 +1,5 @@
 from __future__ import annotations
 from pathlib import Path
-from pyexpat import model
-from typing import Any
-from scripts.verify import DatasetValidationError, parse_args, validate_dataset
 from data.dataset import extract_dataset_torch, split_dataset, DatasetSplits
 import torch
 from torch import nn
@@ -42,8 +39,10 @@ class MLP(nn.Module):
                     nn.ReLU(),
                 ]
             )
-            if dropout >0.0:
+            if dropout >0.0 and dropout <1.0:
                 layers.append(nn.Dropout(p=dropout))
+            elif dropout!=0:
+                raise ValueError("0<= dropout 1")
             prev = hidden
             #appending layers to the model
         layers.append(nn.Linear(prev, num_actions))

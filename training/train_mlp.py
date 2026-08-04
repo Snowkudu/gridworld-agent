@@ -1,13 +1,15 @@
 
 from __future__ import annotations
+import argparse
 from pathlib import Path
 import torch
-from torch import nn,save
+from torch import nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from models.checkpoint import load_model_from_checkpoint
 from models.mlp import MLP
 from training.engine import train_one_epoch, evaluate
-from training.experiment_configs import experiment_configs
+from training.experiment_configs import  get_experiment_configs
 from training.metrics import save_json
 from data.dataset import extract_dataset_torch, split_dataset
 from training.engine import (
@@ -20,6 +22,7 @@ from training.metrics import (
     save_json,
 )
 from utils.reproducibility import create_generator,seed_everything
+
 
 
 def save_selected_model_diagnostics(
@@ -53,6 +56,17 @@ def save_selected_model_diagnostics(
     for row in test_diagnostics["confusion_matrix"]:
         print(row)        
 
+def parse_args()-> argparse.Namespace:
+    parser=argparse.ArgumentParser(description="Train and evaluate supervised MLP models.")
+    parser.add_argument(
+        "--config-set",
+        choices=("final","sweep"),
+        default="final",
+        help=("Run complete model tests or only the best."),
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
     dataset_path = (
         Path(__file__).parents[1]
@@ -60,6 +74,8 @@ def main() -> int:
         / "raw"
         / "gridworld_2000ep_200ms_123seed.npz"
     )
+    args = parse_args()
+    experiment_configs= get_experiment_configs(args.config_set)
     split_seed=123
     experiment_seed=123
 
@@ -277,11 +293,10 @@ def main() -> int:
 
     best_config= checkpoint["config"]
 
-    best_model = MLP(
-        hidden_sizes=tuple(best_config["hidden_sizes"]),
-        dropout=best_config["dropout"]
-    ).to(device)
-    best_model.load_state_dict(checkpoint["model_state_dict"])
+    best_model, best_checkpoint = load_model_from_checkpoint(
+    checkpoint_path=best_result["checkpoint_path"],
+    device=device,
+)
 
     bestLoss ,bestAcc = evaluate(
         model=best_model,
@@ -298,6 +313,23 @@ def main() -> int:
         majority_baseline=majority_baseline,
         root=artifact_root,
     )
+    save_path=Path("results")
+    save_json(
+               (save_path/"mlp_final_results.json"),
+               {
+                "phase": "P2",
+                "dataset": dataset_path.name,
+                "split_seed": best_checkpoint["split_seed"],
+                "experiment_seed": best_checkpoint["experiment_seed"],
+                "selected_config": best_checkpoint["config"],
+                "best_epoch": best_checkpoint["epoch"],
+                "validation_loss": best_checkpoint["validation_loss"],
+                "validation_accuracy": best_checkpoint["validation_accuracy"],
+                "test_loss": bestLoss,
+                "test_accuracy": bestAcc,
+                        }
+           )#save the berst metrics into the results folder
+
     print(f"Best model was from model {checkpoint['experiment_name']}")
     print(f"Test loss: {bestLoss:.4f}")
     print(f"Test accuracy: {bestAcc:.2%}")

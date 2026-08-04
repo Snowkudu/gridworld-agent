@@ -1,7 +1,8 @@
-experiment_configs = [
-    # ------------------------------------------------------------------
-    # Current winner
-    # ------------------------------------------------------------------
+from __future__ import annotations
+from typing import Any
+ExperimentConfig= dict[str,Any]
+
+SWEEP_CONFIG :list[ExperimentConfig]=[
     {
         "name": "mlp_256_128_bs32_lr3e-4_do10",
         "hidden_sizes": (256, 128),
@@ -141,3 +142,26 @@ experiment_configs = [
         "dropout": 0.10,
     },
 ]
+
+FINAL_CONFIG : ExperimentConfig={
+    
+    "name": "mlp_256_128_bs16_lr3e-4_do0.10",
+    "hidden_sizes": (256, 128),
+    "batch_size": 16,
+    "learning_rate": 3e-4,
+    "dropout": 0.10,
+    "weight_decay": 0.0,
+    "max_epochs": 50,
+    "patience": 8,
+    "min_delta": 1e-4,
+    }
+
+
+
+def get_experiment_configs(config_set:str)->list[ExperimentConfig]:
+    if config_set== "final":
+        return [FINAL_CONFIG.copy()]
+    if config_set== "sweep":
+        return [config.copy() for config in SWEEP_CONFIG ]
+    
+    raise ValueError("Uknown config, expected sweep or final.")

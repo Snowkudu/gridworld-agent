@@ -1,6 +1,6 @@
 from collections import deque 
 import numpy as np
-from policies.actions import INF, EMPTY, AGENT, GOAL, OBSTACLE,actions
+from policies.actions import INF, actions
 
 
 def isSolvable(grid):   # Check if the grid is solvable using BFS from start to goal while avoiding obstacles.
