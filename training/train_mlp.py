@@ -8,9 +8,50 @@ from torch.optim import Adam
 from models.mlp import MLP
 from training.engine import train_one_epoch, evaluate
 from training.experiment_configs import experiment_configs
-
+from training.metrics import save_json
 from data.dataset import extract_dataset_torch, split_dataset
+from training.engine import (
+    collect_action_diagnostics,
+    evaluate,
+    train_one_epoch,
+)
+from training.metrics import (
+    calculate_majority_baseline,
+    save_json,
+)
+from utils.reproducibility import create_generator,seed_everything
 
+
+def save_selected_model_diagnostics(
+    model:nn.Module,
+    validation_loader:DataLoader,
+    test_loader:DataLoader,
+    device:torch.device,
+    checkpoint:dict,
+    majority_baseline:dict,
+    root:Path,
+)->None:
+    validation_diagnostics= collect_action_diagnostics(model=model,data_loader=validation_loader,device=device,)
+    test_diagnostics= collect_action_diagnostics(model=model,data_loader=test_loader,device=device,)
+    experiment_name= checkpoint["experiment_name"]
+    for action,accuracy in enumerate(test_diagnostics["per_action_accuracy"]):
+        true_count=test_diagnostics["true_action_counts"][action]
+        predicted_count=test_diagnostics["predicted_action_counts"][action]
+        accuracy_text = (
+            "N/A"
+            if accuracy is None
+            else f"{accuracy:.2%}"
+        )
+        print(
+            f"Action {action}: "
+            f"accuracy={accuracy_text}, "
+            f"true samples={true_count}, "
+            f"predicted={predicted_count}"
+        )
+    print("\nConfusion matrix: rows=true, columns=predicted")
+
+    for row in test_diagnostics["confusion_matrix"]:
+        print(row)        
 
 def main() -> int:
     dataset_path = (
@@ -19,10 +60,33 @@ def main() -> int:
         / "raw"
         / "gridworld_2000ep_200ms_123seed.npz"
     )
+    split_seed=123
+    experiment_seed=123
+
+    artifact_root = Path("artifacts") / "p2_mlp"
+    artifact_root.mkdir(parents=True, exist_ok=True)
+
 
     tensor_X, tensor_y = extract_dataset_torch(dataset_path)
 
     splits = split_dataset(tensor_X, tensor_y, seed=123)
+
+    majority_baseline=calculate_majority_baseline(labels=tensor_y,train_subset=splits.train,validation_subset=splits.val,test_subset=splits.test)
+    save_json(artifact_root/"majority_baseline.json",{
+        "split_seed":123,
+        **majority_baseline,
+        }
+    )
+    print(
+            f"Traning action counts: | " 
+            f"{majority_baseline["training_action_counts"]} | "
+            f"Majority action : "
+            f"{majority_baseline['majority_action']}"
+            f"Test accuracy : " 
+            f"{majority_baseline['test_accuracy']:.2%}"
+        )#majority action prints
+
+    
 
     train_loader=DataLoader(splits.train, batch_size=128, shuffle=True)
     val_loader=DataLoader(splits.val, batch_size=128, shuffle=False)
@@ -31,10 +95,8 @@ def main() -> int:
     device = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )#use gpu if available, otherwise use cpu
-
-   # model = MLP().to(device)
+  
     loss_function = nn.CrossEntropyLoss()
-  #  optimizer = Adam(model.parameters(), lr=1e-3)
     epochs=50
 
     checkpoint_dir = Path("data/models")
@@ -42,12 +104,26 @@ def main() -> int:
     experiment_results = []
 
     for config in experiment_configs:
+        seed_everything(experiment_seed)
+        train_generator=create_generator(experiment_seed)
+
 
         experiment_name = config["name"]
         best_val_loss = float("inf")
         best_val_accuracy = 0.0
         best_epoch = 0
-        checkpoint_path = checkpoint_dir / f"{experiment_name}.pt"
+
+        patience=8
+        min_delta=0.0
+
+        run_dir=artifact_root/experiment_name
+        run_dir.mkdir(parents=True,exist_ok=True)
+
+      #  checkpoint_path = checkpoint_dir / f"{experiment_name}.pt"
+        checkpoint_path= run_dir / "best_model.pt"
+        metrics_path= run_dir / "metrics.json"
+
+        epoch_history: list[dict[str,object]] =[]
 
         print("\n" + "=" * 80)
         print(f"Starting experiment: {experiment_name}")
@@ -56,15 +132,17 @@ def main() -> int:
         print(f"Learning rate:        {config['learning_rate']}")
         print(f"Weight decay:         {config['weight_decay']}")
         print("=" * 80)
-        torch.manual_seed(123)  
-
-
-
-        model = MLP(hidden_sizes=config["hidden_sizes"]).to(device)
+       
+        model = MLP(
+            hidden_sizes=config["hidden_sizes"],
+            dropout=config["dropout"]
+            ).to(device)
 
         optimizer = Adam(model.parameters(), lr=config["learning_rate"], weight_decay=config["weight_decay"])
 
-        train_loader = DataLoader(splits.train, batch_size=config["batch_size"], shuffle=True)
+        train_loader = DataLoader(splits.train, batch_size=config["batch_size"], shuffle=True,generator=train_generator)
+
+
 
         for epoch in range(1, epochs+1):
             train_loss, train_accuracy = train_one_epoch(
@@ -81,13 +159,27 @@ def main() -> int:
                 loss_function=loss_function,
                 device=device,
             )
-            if validation_loss < best_val_loss:
+            epoch_history.append(
+                        {
+                            "epoch": epoch,
+                            "train_loss": train_loss,
+                            "train_accuracy": train_accuracy,
+                            "validation_loss": validation_loss,
+                            "validation_accuracy": validation_accuracy,
+                        }
+                    )
+
+            if validation_loss < best_val_loss-min_delta:
                 best_val_loss = validation_loss
                 best_val_accuracy = validation_accuracy
                 best_epoch = epoch
+                epochs_without_improvement=0
                 torch.save(
                     {
                         "experiment_name": experiment_name,
+                        "config": config.copy(),
+                        "split_seed": split_seed,
+                        "experiment_seed": experiment_seed,
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
@@ -98,6 +190,16 @@ def main() -> int:
                     },
                    checkpoint_path,
                 )
+            else:
+                epochs_without_improvement+=1
+
+            if epochs_without_improvement>=  patience:
+                  print(
+                    f"Early stopping {experiment_name} "
+                    f"at epoch {epoch}"
+                    )
+                  break
+        
                
 
             
@@ -109,6 +211,24 @@ def main() -> int:
                 f"val loss={validation_loss:.4f}, "
                 f"val acc={validation_accuracy:.2%}"
                 )
+        metrics_path = checkpoint_dir / f"{experiment_name}_metrics.json"
+        save_json(
+            metrics_path,
+            {
+               "experiment_name": experiment_name,
+                "config": config,
+                "split_seed": split_seed,
+                "experiment_seed": experiment_seed,
+                "epochs_completed": len(epoch_history),
+                "early_stopped": len(epoch_history)<epochs,
+                "patience": patience,
+                "min_delta": min_delta,
+                "best_epoch": best_epoch,
+                "best_validation_loss": best_val_loss,
+                "best_validation_accuracy": best_val_accuracy,
+                "history": epoch_history, 
+            }
+        )#save the metrics into json after each epoch
            
         print(
             f"\nCompleted {experiment_name}: "
@@ -154,12 +274,29 @@ def main() -> int:
         best_result["checkpoint_path"],
         map_location=device
         )
-    model.load_state_dict(checkpoint["model_state_dict"])
+
+    best_config= checkpoint["config"]
+
+    best_model = MLP(
+        hidden_sizes=tuple(best_config["hidden_sizes"]),
+        dropout=best_config["dropout"]
+    ).to(device)
+    best_model.load_state_dict(checkpoint["model_state_dict"])
+
     bestLoss ,bestAcc = evaluate(
-        model=model,
+        model=best_model,
         data_loader=test_loader,
         loss_function=loss_function,
         device=device,
+    )
+    save_selected_model_diagnostics(
+        model=best_model,
+        validation_loader=val_loader,
+        test_loader=test_loader,
+        device=device,
+        checkpoint=checkpoint,
+        majority_baseline=majority_baseline,
+        root=artifact_root,
     )
     print(f"Best model was from model {checkpoint['experiment_name']}")
     print(f"Test loss: {bestLoss:.4f}")

@@ -14,6 +14,7 @@ class MLP(nn.Module):
             input_size: int = 100,
             hidden_sizes: tuple[int, ...] = (128,128),
             num_actions: int = 4,
+            dropout: float=0.0,
             ) -> None:
         super().__init__()
         if input_size <= 0:
@@ -41,7 +42,8 @@ class MLP(nn.Module):
                     nn.ReLU(),
                 ]
             )
-           
+            if dropout >0.0:
+                layers.append(nn.Dropout(p=dropout))
             prev = hidden
             #appending layers to the model
         layers.append(nn.Linear(prev, num_actions))

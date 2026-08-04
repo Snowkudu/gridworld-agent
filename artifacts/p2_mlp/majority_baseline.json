@@ -1,0 +1,13 @@
+{
+  "split_seed": 123,
+  "majority_action": 1,
+  "training_action_counts": [
+    3287,
+    3430,
+    3314,
+    3312
+  ],
+  "train_accuracy": 0.257063627243042,
+  "validation_accuracy": 0.23395320773124695,
+  "test_accuracy": 0.2612342834472656
+}

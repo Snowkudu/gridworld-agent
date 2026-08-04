@@ -10,11 +10,13 @@ __pycache__/
 
 # Dataset files 
 # Generated datasets
+*.pt
 data/raw/*.npz
 data/models/*.pt
 
 # Keep the directory in Git
 !data/raw/.gitkeep
+!data/models/.gitkeep
 # OS files
 .DS_Store
 Thumbs.db
