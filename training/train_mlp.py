@@ -68,7 +68,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
+def main() -> int: 
     dataset_path = (
         Path(__file__).parents[1]
         / "data"
