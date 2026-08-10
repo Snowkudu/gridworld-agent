@@ -2,12 +2,13 @@ from environment.gridworld import GridWorld
 from environment.renderer import render
 from environment.rewards import manhattan_shaped_reward
 
-size=10
+size = 10
 
-env = GridWorld(size, 0.3,manhattan_shaped_reward,50)
+env = GridWorld(size, 0.3, manhattan_shaped_reward, 50)
 
 state = env.reset()
 done = False
+
 
 def read_action():
     try:
@@ -26,17 +27,17 @@ def read_action():
         # Special keys return a prefix (b"\x00" or b"\xe0") then a code
         if ch in (b"\x00", b"\xe0"):
             code = msvcrt.getch()
-            if code == b'H':
+            if code == b"H":
                 return 0  # Up
-            if code == b'P':
+            if code == b"P":
                 return 1  # Down
-            if code == b'K':
+            if code == b"K":
                 return 2  # Left
-            if code == b'M':
+            if code == b"M":
                 return 3  # Right
-          
+
         else:
-            if ch in (b'q', b'Q'):
+            if ch in (b"q", b"Q"):
                 return None
 
 
@@ -47,7 +48,5 @@ while not done:
         print("Exiting.")
         break
     state, reward, done = env.step(action)
-    print("Reward:", reward,"\n")
+    print("Reward:", reward, "\n")
     s = env.debug_tensor()
-
-   

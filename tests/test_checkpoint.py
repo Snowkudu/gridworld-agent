@@ -71,13 +71,12 @@ def test_checkpoint_round_trip_reconstructs_identical_model(
     )
 
     dropout_layers = [
-        layer
-        for layer in restored_model.modules()
-        if isinstance(layer, nn.Dropout)
+        layer for layer in restored_model.modules() if isinstance(layer, nn.Dropout)
     ]
 
     assert len(dropout_layers) == 2
     assert all(layer.p == 0.10 for layer in dropout_layers)
+
 
 def test_checkpoint_requires_config(tmp_path) -> None:
     checkpoint_path = tmp_path / "missing_config.pt"
@@ -93,7 +92,8 @@ def test_checkpoint_requires_config(tmp_path) -> None:
         load_model_from_checkpoint(
             checkpoint_path=checkpoint_path,
             device=torch.device("cpu"),
-        )   
+        )
+
 
 def test_checkpoint_requires_model_state_dict(tmp_path) -> None:
     checkpoint_path = tmp_path / "missing_state_dict.pt"

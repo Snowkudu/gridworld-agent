@@ -44,10 +44,7 @@ def test_train_one_epoch_updates_parameters() -> None:
     loss_function = nn.CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=1e-2)
 
-    parameters_before = [
-        parameter.detach().clone()
-        for parameter in model.parameters()
-    ]
+    parameters_before = [parameter.detach().clone() for parameter in model.parameters()]
 
     loss, accuracy = train_one_epoch(
         model=model,
@@ -154,4 +151,3 @@ def test_empty_loader_raises_clean_error(
                 loss_function=loss_function,
                 device=DEVICE,
             )
-

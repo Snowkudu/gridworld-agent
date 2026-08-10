@@ -13,8 +13,10 @@ def sparse_reward(
         return -5
     return -1.0
 
+
 def manhattan_distance(position, goal) -> int:
     return abs(position[0] - goal[0]) + abs(position[1] - goal[1])
+
 
 def manhattan_shaped_reward(
     previous_position,

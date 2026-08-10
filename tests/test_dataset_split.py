@@ -14,9 +14,7 @@ def make_dataset(
         dtype=torch.float32,
     ).reshape(sample_count, 10, 10)
 
-    actions = (
-        torch.arange(sample_count, dtype=torch.int64) % 4
-    )
+    actions = torch.arange(sample_count, dtype=torch.int64) % 4
 
     return states, actions
 
@@ -34,12 +32,7 @@ def test_split_lengths_use_every_sample() -> None:
     assert len(splits.val) == 10
     assert len(splits.test) == 11
 
-    assert (
-        len(splits.train)
-        + len(splits.val)
-        + len(splits.test)
-        == len(states)
-    )
+    assert len(splits.train) + len(splits.val) + len(splits.test) == len(states)
 
 
 def test_same_seed_produces_identical_splits() -> None:

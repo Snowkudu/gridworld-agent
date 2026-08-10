@@ -269,7 +269,7 @@ def test_rejects_action_that_enters_obstacle() -> None:
         DatasetValidationError,
         match=r"enters obstacle",
     ):
-        validate_arrays(X,y)
+        validate_arrays(X, y)
 
 
 def test_rejects_duplicate_states_with_same_label() -> None:
@@ -297,8 +297,6 @@ def test_rejects_duplicate_states_with_conflicting_labels() -> None:
         validate_arrays(X, y)
 
 
-
-
 def test_cli_returns_zero_for_valid_dataset(tmp_path: Path) -> None:
     X, y = make_valid_arrays()
     dataset_path = tmp_path / "valid.npz"
@@ -321,10 +319,8 @@ def test_cli_returns_zero_for_valid_dataset(tmp_path: Path) -> None:
         check=False,
     )
 
-    assert result.returncode == 0, (
-        f"stdout:\n{result.stdout}\n"
-        f"stderr:\n{result.stderr}"
-    )
+    assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+
 
 def test_cli_returns_nonzero_for_invalid_dataset(
     tmp_path: Path,
@@ -356,10 +352,6 @@ def test_cli_returns_nonzero_for_invalid_dataset(
 
     assert result.returncode != 0
     assert "VALIDATION FAILED" in combined_output
-
-
-
-    
 
 
 UP = 0
@@ -403,6 +395,7 @@ def make_timeout_test_env(
 
     return env
 
+
 def test_boundary_hit_on_final_step_times_out() -> None:
     env = make_timeout_test_env(
         agent=(0, 1),
@@ -415,6 +408,7 @@ def test_boundary_hit_on_final_step_times_out() -> None:
     assert env.state == (0, 1)
     assert done is True
     assert reward == -5.0
+
 
 def test_obstacle_hit_on_final_step_times_out() -> None:
     env = make_timeout_test_env(
@@ -429,6 +423,7 @@ def test_obstacle_hit_on_final_step_times_out() -> None:
     assert env.state == (1, 1)
     assert done is True
     assert reward == -5.0
+
 
 def test_legal_final_step_is_applied_before_timeout() -> None:
     env = make_timeout_test_env(
@@ -446,4 +441,4 @@ def test_legal_final_step_is_applied_before_timeout() -> None:
     grid = state_vector.reshape(env.grid_size, env.grid_size)
 
     assert grid[1, 2] == 1
-    assert grid[1, 1] == 0    
+    assert grid[1, 1] == 0

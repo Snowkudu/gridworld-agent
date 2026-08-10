@@ -1,0 +1,505 @@
+{
+  "checkpoint": "artifacts/p2_mlp/mlp_256_128_bs16_lr3e-4_do0.10/best_model.pt",
+  "episodes": [
+    {
+      "steps": 7,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 2,
+      "oracle_agreement": 0.2857142857142857,
+      "random_rescues": 5,
+      "rescue_rate": 0.7142857142857143,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 1,
+      "success": true,
+      "timeout": false,
+      "oracle_matches": 1,
+      "oracle_agreement": 1.0,
+      "random_rescues": 0,
+      "rescue_rate": 0.0,
+      "fully_autonomous": true
+    },
+    {
+      "steps": 6,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 4,
+      "oracle_agreement": 0.6666666666666666,
+      "random_rescues": 2,
+      "rescue_rate": 0.3333333333333333,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 29,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 10,
+      "oracle_agreement": 0.3448275862068966,
+      "random_rescues": 19,
+      "rescue_rate": 0.6551724137931034,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 9,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 0,
+      "oracle_agreement": 0.0,
+      "random_rescues": 9,
+      "rescue_rate": 1.0,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 10,
+      "oracle_agreement": 0.2,
+      "random_rescues": 40,
+      "rescue_rate": 0.8,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 18,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 7,
+      "oracle_agreement": 0.3888888888888889,
+      "random_rescues": 11,
+      "rescue_rate": 0.6111111111111112,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 21,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 5,
+      "oracle_agreement": 0.23809523809523808,
+      "random_rescues": 16,
+      "rescue_rate": 0.7619047619047619,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 16,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 7,
+      "oracle_agreement": 0.4375,
+      "random_rescues": 9,
+      "rescue_rate": 0.5625,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 30,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 2,
+      "oracle_agreement": 0.06666666666666667,
+      "random_rescues": 28,
+      "rescue_rate": 0.9333333333333333,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 3,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 2,
+      "oracle_agreement": 0.6666666666666666,
+      "random_rescues": 1,
+      "rescue_rate": 0.3333333333333333,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 12,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 7,
+      "oracle_agreement": 0.5833333333333334,
+      "random_rescues": 5,
+      "rescue_rate": 0.4166666666666667,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 38,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 13,
+      "oracle_agreement": 0.34210526315789475,
+      "random_rescues": 25,
+      "rescue_rate": 0.6578947368421053,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 32,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 8,
+      "oracle_agreement": 0.25,
+      "random_rescues": 24,
+      "rescue_rate": 0.75,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 21,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 5,
+      "oracle_agreement": 0.23809523809523808,
+      "random_rescues": 16,
+      "rescue_rate": 0.7619047619047619,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 9,
+      "oracle_agreement": 0.18,
+      "random_rescues": 41,
+      "rescue_rate": 0.82,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 10,
+      "oracle_agreement": 0.2,
+      "random_rescues": 40,
+      "rescue_rate": 0.8,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 3,
+      "oracle_agreement": 0.06,
+      "random_rescues": 47,
+      "rescue_rate": 0.94,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 1,
+      "success": true,
+      "timeout": false,
+      "oracle_matches": 1,
+      "oracle_agreement": 1.0,
+      "random_rescues": 0,
+      "rescue_rate": 0.0,
+      "fully_autonomous": true
+    },
+    {
+      "steps": 7,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 2,
+      "oracle_agreement": 0.2857142857142857,
+      "random_rescues": 5,
+      "rescue_rate": 0.7142857142857143,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 16,
+      "oracle_agreement": 0.32,
+      "random_rescues": 34,
+      "rescue_rate": 0.68,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 19,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 8,
+      "oracle_agreement": 0.42105263157894735,
+      "random_rescues": 11,
+      "rescue_rate": 0.5789473684210527,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 26,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 11,
+      "oracle_agreement": 0.4230769230769231,
+      "random_rescues": 15,
+      "rescue_rate": 0.5769230769230769,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 14,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 5,
+      "oracle_agreement": 0.35714285714285715,
+      "random_rescues": 9,
+      "rescue_rate": 0.6428571428571429,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 10,
+      "oracle_agreement": 0.2,
+      "random_rescues": 40,
+      "rescue_rate": 0.8,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 7,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 3,
+      "oracle_agreement": 0.42857142857142855,
+      "random_rescues": 4,
+      "rescue_rate": 0.5714285714285714,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 24,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 7,
+      "oracle_agreement": 0.2916666666666667,
+      "random_rescues": 17,
+      "rescue_rate": 0.7083333333333334,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 30,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 3,
+      "oracle_agreement": 0.1,
+      "random_rescues": 27,
+      "rescue_rate": 0.9,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 8,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 4,
+      "oracle_agreement": 0.5,
+      "random_rescues": 4,
+      "rescue_rate": 0.5,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 12,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 3,
+      "oracle_agreement": 0.25,
+      "random_rescues": 9,
+      "rescue_rate": 0.75,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 8,
+      "oracle_agreement": 0.16,
+      "random_rescues": 42,
+      "rescue_rate": 0.84,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 19,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 3,
+      "oracle_agreement": 0.15789473684210525,
+      "random_rescues": 16,
+      "rescue_rate": 0.8421052631578947,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 32,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 4,
+      "oracle_agreement": 0.125,
+      "random_rescues": 28,
+      "rescue_rate": 0.875,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 12,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 6,
+      "oracle_agreement": 0.5,
+      "random_rescues": 6,
+      "rescue_rate": 0.5,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 13,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 6,
+      "oracle_agreement": 0.46153846153846156,
+      "random_rescues": 7,
+      "rescue_rate": 0.5384615384615384,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 8,
+      "oracle_agreement": 0.16,
+      "random_rescues": 42,
+      "rescue_rate": 0.84,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 16,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 11,
+      "oracle_agreement": 0.6875,
+      "random_rescues": 5,
+      "rescue_rate": 0.3125,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 20,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 7,
+      "oracle_agreement": 0.35,
+      "random_rescues": 13,
+      "rescue_rate": 0.65,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 32,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 9,
+      "oracle_agreement": 0.28125,
+      "random_rescues": 23,
+      "rescue_rate": 0.71875,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 39,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 5,
+      "oracle_agreement": 0.1282051282051282,
+      "random_rescues": 34,
+      "rescue_rate": 0.8717948717948718,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 41,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 7,
+      "oracle_agreement": 0.17073170731707318,
+      "random_rescues": 34,
+      "rescue_rate": 0.8292682926829268,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 25,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 2,
+      "oracle_agreement": 0.08,
+      "random_rescues": 23,
+      "rescue_rate": 0.92,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 32,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 8,
+      "oracle_agreement": 0.25,
+      "random_rescues": 24,
+      "rescue_rate": 0.75,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 40,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 13,
+      "oracle_agreement": 0.325,
+      "random_rescues": 27,
+      "rescue_rate": 0.675,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 15,
+      "oracle_agreement": 0.3,
+      "random_rescues": 35,
+      "rescue_rate": 0.7,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 50,
+      "success": false,
+      "timeout": true,
+      "oracle_matches": 4,
+      "oracle_agreement": 0.08,
+      "random_rescues": 46,
+      "rescue_rate": 0.92,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 32,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 13,
+      "oracle_agreement": 0.40625,
+      "random_rescues": 19,
+      "rescue_rate": 0.59375,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 12,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 6,
+      "oracle_agreement": 0.5,
+      "random_rescues": 6,
+      "rescue_rate": 0.5,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 25,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 0,
+      "oracle_agreement": 0.0,
+      "random_rescues": 25,
+      "rescue_rate": 1.0,
+      "fully_autonomous": false
+    },
+    {
+      "steps": 46,
+      "success": false,
+      "timeout": false,
+      "oracle_matches": 13,
+      "oracle_agreement": 0.2826086956521739,
+      "random_rescues": 33,
+      "rescue_rate": 0.717391304347826,
+      "fully_autonomous": false
+    }
+  ]
+}

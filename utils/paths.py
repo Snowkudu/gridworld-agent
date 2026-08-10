@@ -20,8 +20,10 @@ def project_root() -> Path:
     # Fallback: 2 levels up from utils/paths.py (repo/utils/paths.py)
     return Path(__file__).resolve().parents[1]
 
+
 def data_dir() -> Path:
     return project_root() / "data"
+
 
 def raw_data_dir() -> Path:
     return data_dir() / "raw"

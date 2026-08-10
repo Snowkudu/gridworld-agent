@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-ExperimentConfig= dict[str,Any]
+ExperimentConfig = dict[str, Any]
 
-SWEEP_CONFIG :list[ExperimentConfig]=[
+SWEEP_CONFIG: list[ExperimentConfig] = [
     {
         "name": "mlp_256_128_bs32_lr3e-4_do10",
         "hidden_sizes": (256, 128),
@@ -13,7 +13,6 @@ SWEEP_CONFIG :list[ExperimentConfig]=[
         "weight_decay": 0.0,
         "dropout": 0.10,
     },
-
     # ------------------------------------------------------------------
     # Batch-size sweep
     # Everything else matches the winner.
@@ -42,7 +41,6 @@ SWEEP_CONFIG :list[ExperimentConfig]=[
         "weight_decay": 0.0,
         "dropout": 0.10,
     },
-
     # ------------------------------------------------------------------
     # Dropout sweep
     # ------------------------------------------------------------------
@@ -78,7 +76,6 @@ SWEEP_CONFIG :list[ExperimentConfig]=[
         "weight_decay": 0.0,
         "dropout": 0.20,
     },
-
     # ------------------------------------------------------------------
     # Learning-rate sweep
     # 1e-4 is conservative; 1e-3 and 3e-3 are increasingly aggressive.
@@ -107,7 +104,6 @@ SWEEP_CONFIG :list[ExperimentConfig]=[
         "weight_decay": 0.0,
         "dropout": 0.10,
     },
-
     # ------------------------------------------------------------------
     # Capacity sweep
     # ------------------------------------------------------------------
@@ -145,8 +141,7 @@ SWEEP_CONFIG :list[ExperimentConfig]=[
     },
 ]
 
-FINAL_CONFIG : ExperimentConfig={
-    
+FINAL_CONFIG: ExperimentConfig = {
     "name": "mlp_256_128_bs16_lr3e-4_do0.10",
     "hidden_sizes": (256, 128),
     "batch_size": 16,
@@ -156,7 +151,7 @@ FINAL_CONFIG : ExperimentConfig={
     "max_epochs": 50,
     "patience": 8,
     "min_delta": 1e-4,
-    }
+}
 
 TRAINING_DEFAULTS: ExperimentConfig = {
     "max_epochs": 50,
@@ -165,16 +160,17 @@ TRAINING_DEFAULTS: ExperimentConfig = {
 }
 
 
-def resolve_config(config:ExperimentConfig)->ExperimentConfig:
-    return{
+def resolve_config(config: ExperimentConfig) -> ExperimentConfig:
+    return {
         **TRAINING_DEFAULTS,
         **config,
     }
 
-def get_experiment_configs(config_set:str)->list[ExperimentConfig]:
-    if config_set== "final":
+
+def get_experiment_configs(config_set: str) -> list[ExperimentConfig]:
+    if config_set == "final":
         return [resolve_config(FINAL_CONFIG.copy())]
-    if config_set== "sweep":
-        return [resolve_config(config.copy()) for config in SWEEP_CONFIG ]
-    
+    if config_set == "sweep":
+        return [resolve_config(config.copy()) for config in SWEEP_CONFIG]
+
     raise ValueError("Uknown config, expected sweep or final.")

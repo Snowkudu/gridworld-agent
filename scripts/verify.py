@@ -20,13 +20,10 @@ STATE_DTYPE = np.dtype(np.float32)
 ACTION_DTYPE = np.dtype(np.int64)
 
 
-
 ALLOWED_STATE_VALUES = np.array(
     [OBSTACLE_VALUE, 0, AGENT_VALUE, GOAL_VALUE],
     dtype=STATE_DTYPE,
 )
-
-
 
 
 class DatasetValidationError(ValueError):
@@ -40,9 +37,7 @@ def load_dataset(
     dataset_path = Path(dataset_path)
 
     if not dataset_path.is_file():
-        raise DatasetValidationError(
-            f"Dataset does not exist: {dataset_path}"
-        )
+        raise DatasetValidationError(f"Dataset does not exist: {dataset_path}")
 
     try:
         with np.load(dataset_path, allow_pickle=False) as archive:
@@ -130,7 +125,7 @@ def _validate_values(
         np.fromiter(
             range(len(ACTION_DELTAS)),
             dtype=ACTION_DTYPE,
-        )
+        ),
     )
 
     if invalid_action_mask.any():
@@ -169,9 +164,7 @@ def _validate_grid_contents(
             f"Sample {index} contains {goal_counts[index]} goals; expected 1"
         )
 
-    invalid_obstacle_samples = np.flatnonzero(
-        obstacle_counts != EXPECTED_OBSTACLES
-    )
+    invalid_obstacle_samples = np.flatnonzero(obstacle_counts != EXPECTED_OBSTACLES)
 
     if invalid_obstacle_samples.size:
         index = int(invalid_obstacle_samples[0])
@@ -195,10 +188,7 @@ def _validate_action_legality(
         next_row = int(row + row_delta)
         next_column = int(column + column_delta)
 
-        if not (
-            0 <= next_row < GRID_SIZE
-            and 0 <= next_column < GRID_SIZE
-        ):
+        if not (0 <= next_row < GRID_SIZE and 0 <= next_column < GRID_SIZE):
             raise DatasetValidationError(
                 f"Sample {sample_index} has illegal action {action}: "
                 f"move from {(int(row), int(column))} leaves the grid"

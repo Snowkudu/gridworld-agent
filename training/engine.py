@@ -17,10 +17,9 @@ def train_one_epoch(
     total_loss = 0.0
     correct_predictions = 0
     total_samples = 0
-    
-    
+
     for states, actions in data_loader:
-        states  = states.to(device)
+        states = states.to(device)
         actions = actions.to(device)
 
         optimizer.zero_grad(set_to_none=True)
@@ -37,31 +36,32 @@ def train_one_epoch(
         total_loss += loss.item() * batch_size
         total_samples += batch_size
         correct_predictions += (logits.argmax(dim=1) == actions).sum().item()
-    
+
     if total_samples == 0:
-     raise ValueError("No samples were processed during training.")   
+        raise ValueError("No samples were processed during training.")
 
     average_loss = total_loss / total_samples
     accuracy = correct_predictions / total_samples
 
     return average_loss, accuracy
 
+
 @inference_mode()
 def evaluate(
-    model : nn.Module,
+    model: nn.Module,
     data_loader: DataLoader,
     loss_function: nn.Module,
     device: torch.device,
-)-> tuple[float, float]:
+) -> tuple[float, float]:
     """Evaluate the model and return the average loss and accuracy.No backprog no gradient updates."""
-    
+
     model.eval()
     total_loss = 0.0
     correct_predictions = 0
     total_samples = 0
 
     for states, actions in data_loader:
-        states  = states.to(device)
+        states = states.to(device)
         actions = actions.to(device)
 
         logits = model(states)
@@ -82,37 +82,40 @@ def evaluate(
 
     return average_loss, accuracy
 
+
 @inference_mode()
 def collect_action_diagnostics(
-    model:nn.Module,
+    model: nn.Module,
     data_loader: DataLoader,
     device: torch.device,
     *,
-    num_actions: int=4,
-)->dict[str,object]:
+    num_actions: int = 4,
+) -> dict[str, object]:
 
     model.eval()
 
-    confusion_matrix= torch.zeros(num_actions,num_actions,dtype=torch.int64)
+    confusion_matrix = torch.zeros(num_actions, num_actions, dtype=torch.int64)
 
-    total_samples=0
+    total_samples = 0
 
-    for states,actions in data_loader:
-        states=states.to(device)
-        actions=actions.to(device)
+    for states, actions in data_loader:
+        states = states.to(device)
+        actions = actions.to(device)
 
-        logits=model(states)
-        predictions= logits.argmax(dim=1)
+        logits = model(states)
+        predictions = logits.argmax(dim=1)
 
-        actions_cpu= actions.cpu()
-        predictions_cpu= predictions.cpu()
+        actions_cpu = actions.cpu()
+        predictions_cpu = predictions.cpu()
 
-        flat_pairs= (actions_cpu*num_actions+predictions_cpu)
+        flat_pairs = actions_cpu * num_actions + predictions_cpu
 
-        batch_confusion= torch.bincount(flat_pairs,minlength=num_actions*num_actions).reshape(num_actions,num_actions)
+        batch_confusion = torch.bincount(
+            flat_pairs, minlength=num_actions * num_actions
+        ).reshape(num_actions, num_actions)
 
-        confusion_matrix+= batch_confusion
-        total_samples+= actions.shape[0]
+        confusion_matrix += batch_confusion
+        total_samples += actions.shape[0]
 
     if total_samples == 0:
         raise ValueError("no samples processed during diagnostics")
@@ -129,18 +132,13 @@ def collect_action_diagnostics(
         if support == 0:
             per_action_accuracy.append(None)
         else:
-            accuracy = (
-                correct_per_action[action].item() / support
-            )
+            accuracy = correct_per_action[action].item() / support
             per_action_accuracy.append(float(accuracy))
 
     return {
         "sample_count": total_samples,
         "confusion_matrix": confusion_matrix.tolist(),
         "true_action_counts": true_action_counts.tolist(),
-        "predicted_action_counts": (
-            predicted_action_counts.tolist()
-        ),
+        "predicted_action_counts": (predicted_action_counts.tolist()),
         "per_action_accuracy": per_action_accuracy,
     }
-        
