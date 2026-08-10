@@ -6,7 +6,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
+import environment.evaluate as evaluate_module
+from environment.evaluate import random_logit, run_headless_eval
 from environment.gridworld import GOAL, OBSTACLE, GridWorld
 from environment.rewards import manhattan_shaped_reward
 from scripts.verify import DatasetValidationError, validate_arrays
@@ -442,3 +445,139 @@ def test_legal_final_step_is_applied_before_timeout() -> None:
 
     assert grid[1, 2] == 1
     assert grid[1, 1] == 0
+
+
+# ---------------------------------------------------------------------------
+# P3 regression tests
+# ---------------------------------------------------------------------------
+
+
+def test_is_legal_open_cell() -> None:
+    env = make_timeout_test_env(
+        agent=(1, 1),
+        goal=(3, 3),
+        max_steps=10,
+    )
+
+    assert env.is_legal(RIGHT) is True
+
+
+def test_is_legal_obstacle() -> None:
+    env = make_timeout_test_env(
+        agent=(1, 1),
+        goal=(3, 3),
+        obstacles=((1, 2),),
+        max_steps=10,
+    )
+
+    assert env.is_legal(RIGHT) is False
+
+
+def test_is_legal_boundary() -> None:
+    env = make_timeout_test_env(
+        agent=(0, 1),
+        goal=(3, 3),
+        max_steps=10,
+    )
+
+    assert env.is_legal(UP) is False
+
+
+def test_is_legal_goal() -> None:
+    env = make_timeout_test_env(
+        agent=(1, 1),
+        goal=(1, 2),
+        max_steps=10,
+    )
+
+    assert env.is_legal(RIGHT) is True
+
+
+def test_random_rescue_is_legal_and_not_rejected() -> None:
+    env = make_timeout_test_env(
+        agent=(1, 1),
+        goal=(3, 3),
+        obstacles=((0, 1),),
+        max_steps=10,
+    )
+
+    # UP is deliberately the highest logit / rejected model action.
+    logits = torch.tensor([5.0, 1.0, 0.5, 0.25])
+
+    rejected_action = int(logits.argmax().item())
+    rescue_action = random_logit(logits, env)
+
+    assert rescue_action != rejected_action
+    assert env.is_legal(rescue_action)
+
+
+def test_rescued_goal_is_success_but_not_autonomous(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env = make_timeout_test_env(
+        agent=(1, 1),
+        goal=(1, 2),
+        max_steps=10,
+    )
+
+    # Raw model action: UP
+    monkeypatch.setattr(
+        evaluate_module,
+        "predict_logits",
+        lambda model, state, device: torch.tensor([5.0, 0.0, 0.0, 0.0]),
+    )
+
+    # Oracle says RIGHT, therefore disagreement triggers rescue.
+    monkeypatch.setattr(
+        evaluate_module.OraclePolicy,
+        "select_action",
+        lambda env: RIGHT,
+    )
+
+    # Force the rescue to RIGHT so the agent reaches the goal.
+    monkeypatch.setattr(
+        evaluate_module,
+        "random_logit",
+        lambda logits, env: RIGHT,
+    )
+
+    stats = run_headless_eval(
+        env=env,
+        model=object(),
+        device=torch.device("cpu"),
+    )
+
+    assert stats["success"] is True
+    assert stats["timeout"] is False
+    assert stats["random_rescues"] == 1
+    assert stats["fully_autonomous"] is False
+
+
+def test_headless_action_accounting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env = make_timeout_test_env(
+        agent=(1, 1),
+        goal=(1, 2),
+        max_steps=10,
+    )
+
+    monkeypatch.setattr(
+        evaluate_module,
+        "predict_logits",
+        lambda model, state, device: torch.tensor([0.0, 0.0, 0.0, 5.0]),
+    )
+
+    monkeypatch.setattr(
+        evaluate_module.OraclePolicy,
+        "select_action",
+        lambda env: RIGHT,
+    )
+
+    stats = run_headless_eval(
+        env=env,
+        model=object(),
+        device=torch.device("cpu"),
+    )
+
+    assert stats["steps"] == (stats["oracle_matches"] + stats["random_rescues"])

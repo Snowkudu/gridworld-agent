@@ -32,7 +32,6 @@ def predict_logits(
     model: nn.Module,
     state: np.ndarray,
     device: torch.device,
-    env,
 ) -> torch.Tensor:
     model.eval()
     tensor = torch.as_tensor(state, dtype=torch.float32, device=device)
@@ -43,11 +42,8 @@ def predict_logits(
     return logits.squeeze(0).cpu()
 
 
-def action_from_logits(logits: torch.Tensor) -> tuple[int, bool]:
+def action_from_logits(logits: torch.Tensor) -> int:
     return int(logits.argmax().item())
-
-    # if env.is_legal(raw_action):
-    #   return raw_action, False
 
 
 # get a random valid logit
@@ -64,19 +60,19 @@ def random_logit(logits: torch.Tensor, env):
     return action
 
 
-def run_headless_eval(env, model, config, device):
+def run_headless_eval(env, model, device):
     done = False
     steps = random_rescues = oracle_matches = 0
     while not done and steps < env.maxsteps:
         oracle_action = OraclePolicy.select_action(env)
         model_action = action_from_logits(
-            predict_logits(model, env.state_vector(), device, env)
+            predict_logits(model, env.state_vector(), device)
         )
         if model_action == oracle_action:
             oracle_matches += 1
         else:
             model_action = random_logit(
-                predict_logits(model, env.state_vector(), device, env), env
+                predict_logits(model, env.state_vector(), device), env
             )
             random_rescues += 1
         _, _, done = env.step(model_action)
@@ -87,7 +83,7 @@ def run_headless_eval(env, model, config, device):
     timeout = steps >= env.maxsteps and not success
     episode_stats = {
         "steps": steps,
-        "success": success and random_rescues == 0,
+        "success": success,
         "timeout": timeout,
         "oracle_matches": oracle_matches,
         "oracle_agreement": oracle_matches / steps if steps else 0.0,
@@ -106,11 +102,10 @@ def run_pygame_eval(env, model, device, fps):
     viewer.render_grid(env)
     viewer.tick(fps)
     while not done and steps < env.maxsteps:
-        before = env.state
         if not viewer.process_events():
             break
         model_action = action_from_logits(
-            predict_logits(model, env.state_vector(), device, env)
+            predict_logits(model, env.state_vector(), device)
         )
         oracle_action = OraclePolicy.select_action(env)
         action = model_action
@@ -118,7 +113,7 @@ def run_pygame_eval(env, model, device, fps):
             oracle_matches += 1
         else:
             action = random_logit(
-                predict_logits(model, env.state_vector(), device, env), env
+                predict_logits(model, env.state_vector(), device), env
             )
             random_rescues += 1
             assert action != model_action
@@ -136,16 +131,16 @@ def run_pygame_eval(env, model, device, fps):
             status=status,
         )
         viewer.tick(fps)
-        after = env.state
-        print(
-            f"{steps=:02d} "
-            f"{before=} "
-            f"raw={model_action} "
-            f"oracle={oracle_action} "
-            f"executed={action} "
-            f"{after=} "
-            f"{done=}"
-        )
+    status = "SUCCESS" if env.state == env.goal_state else "TIMEOUT"
+    viewer.render(
+        env,
+        steps,
+        model_action,
+        oracle_action,
+        action,
+        random_rescues,
+        status=status,
+    )
     waiting = True
     while waiting:
         waiting = viewer.process_events()
@@ -156,7 +151,7 @@ def run_pygame_eval(env, model, device, fps):
 
 def main() -> int:
     config = parse_args()
-    env = init_world(999)
+    env = init_world(config.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, _ = load_model_from_checkpoint(config.checkpoint, device)
     random.seed(config.seed)
@@ -166,14 +161,15 @@ def main() -> int:
         for episode in range(config.episodes):
             episode_seed = int(rng.integers(0, 2**31 - 1))
             env = init_world(episode_seed)
-            episode_stat = run_headless_eval(env, model, config, device)
+            episode_stat = run_headless_eval(env, model, device)
             all_episode_stats.append(episode_stat)
 
         results = {
             "checkpoint": str(config.checkpoint),
             "episodes": all_episode_stats,
         }
-        output_path = Path("results/p3_eval/mlp_headless.json")
+        checkpoint_name = Path(config.checkpoint).parent.name
+        output_path = Path("results/p3_eval") / f"{checkpoint_name}.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with output_path.open("w") as f:
             json.dump(results, f, indent=2)

@@ -86,9 +86,8 @@ class PygameViewer:
         self.draw_text(f"Model:{ACTION_NAMES[model_action]}", x, y + gap)
         self.draw_text(f"Oracle:{ACTION_NAMES[oracle_action]}", x, y + gap * 2)
         self.draw_text(f"Executed:{ACTION_NAMES[executed_action]}", x, y + gap * 3)
-        self.draw_text(f"Interventions: {interventions}", x, y + gap * 4)
+        self.draw_text(f"Random Actions: {interventions}", x, y + gap * 4)
         self.draw_text(f"Status: {status}", x, y + gap * 6)
-        self.draw_text(f"Model:{ACTION_NAMES[model_action]}", x, y + gap)
         pygame.display.flip()
 
     def render_grid(self, env: GridWorld):

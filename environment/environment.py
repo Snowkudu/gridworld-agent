@@ -9,16 +9,7 @@ from environment.rewards import manhattan_shaped_reward
 # send the output to pygame
 
 
-def init_world(seed) -> GridWorld:
+def init_world(seed: int) -> GridWorld:
     env = GridWorld(10, 0.3, manhattan_shaped_reward, 50, seed)
     env.reset()
     return env
-
-
-def update_world(env: GridWorld, a: int):
-
-    return env.step(a)
-
-
-def print(env: GridWorld):
-    return env.observation_grid(env)
