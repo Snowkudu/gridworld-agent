@@ -7,7 +7,7 @@ from models.cnn import CNN
 from models.mlp import MLP
 
 
-def build_model_from_config(config: dict[str, Any]) -> nn.module:
+def build_model_from_config(config: dict[str, Any]) -> nn.Module:
     type= config.get("model_type","mlp")
     if type== "mlp":
         return MLP(

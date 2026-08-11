@@ -151,7 +151,7 @@ def run_pygame_eval(env, model, device, fps):
 
 def main() -> int:
     config = parse_args()
-    env = init_world(config.seed)
+    env = init_world(config.seed,200)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, _ = load_model_from_checkpoint(config.checkpoint, device)
     random.seed(config.seed)
