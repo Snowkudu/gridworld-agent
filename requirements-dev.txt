@@ -9,4 +9,3 @@ netron== 9.2.1
 onnx == 1.22.0
 onnxscript== 0.7.1
 onnxruntime ==1.28.0
-netron == 9.2.1

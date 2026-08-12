@@ -511,6 +511,21 @@ def test_random_rescue_is_legal_and_not_rejected() -> None:
     assert env.is_legal(rescue_action)
 
 
+def test_random_rescue_falls_back_when_no_alternative() -> None:
+    class OnlyChosenIsLegal:
+        def is_legal(self, action: int) -> bool:
+            return action == 0
+
+    logits = torch.tensor([5.0, 1.0, 0.5, 0.25])
+
+    action = random_logit(
+        logits,
+        OnlyChosenIsLegal(),
+    )
+
+    assert action == 0
+
+
 def test_rescued_goal_is_success_but_not_autonomous(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

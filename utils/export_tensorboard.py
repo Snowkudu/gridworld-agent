@@ -7,9 +7,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from tensorboard.backend.event_processing import event_accumulator
 
-LOG_DIR = Path("artifacts/p4_cnn/tensorboard")
-OUTPUT_DIR = Path("artifacts/p4_cnn/tensorboard_exports")
-
 TAGS = [
     "Accuracy/train",
     "Accuracy/validation",

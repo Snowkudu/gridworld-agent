@@ -66,8 +66,8 @@ def random_logit(logits: torch.Tensor, env):
         for action in range(logits.numel())
         if env.is_legal(action) and action != chosen
     ]
-    if legal_actions == []:
-        action = chosen
+    if not legal_actions:
+        return chosen
     action = random.choice(legal_actions)
     return action
 
@@ -120,7 +120,7 @@ def run_headless_eval(env, model, device, config, mode):
     return episode_stats
 
 
-def run_pygame_eval(env, model, device, fps, config, mode):
+def run_pygame_eval(env, model, device, fps, config):
     viewer = PygameViewer(env.grid_size)
     done = False
     steps = random_rescues = oracle_matches = 0
@@ -129,7 +129,8 @@ def run_pygame_eval(env, model, device, fps, config, mode):
     viewer.tick(fps)
     while not done and steps < env.maxsteps:
         if not viewer.process_events():
-            break
+            viewer.close()
+            return
         model_action = action_from_logits(
             predict_logits(model, env.state_vector(), device, config)
         )

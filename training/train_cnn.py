@@ -14,7 +14,6 @@ from configs.cnn_experiments import DATASET_SEEDS, get_experiment_configs
 from data.dataset import extract_dataset_torch, split_dataset
 from data.representation import to_cnn_1ch, to_cnn_3ch
 from environment.environment import init_world
-from models.checkpoint import load_model_from_checkpoint
 from models.cnn import CNN
 from scripts.generate_dataset import (
     generate_dataset,  # use your actual generator import
@@ -56,7 +55,6 @@ def parse_args() -> argparse.Namespace:
         choices=(
             "baseline",
             "architecture",
-            "sweep",
             "finals",
             "weight_decay",
             "head",
@@ -134,9 +132,6 @@ def main():
         val_loader = DataLoader(
             splits.val, batch_size=batch_size, shuffle=False, generator=train_generator
         )
-        test_loader = DataLoader(
-            splits.test, batch_size=batch_size, shuffle=False, generator=train_generator
-        )
 
         model = CNN(
             input_ch=input_ch,
@@ -181,6 +176,8 @@ def main():
             0,
         )
 
+        epochs_without_improvement = 0
+        best_time_to_checkpoint = 0.0
         for epoch in range(1, max_epochs + 1):
             sync_cuda(device)
             epoch_start = time.perf_counter()
@@ -200,7 +197,6 @@ def main():
             )
 
             sync_cuda(device)
-            epoch_elapsed = time.perf_counter() - epoch_start
             epoch_elapsed = time.perf_counter() - epoch_start
             cumulative_elapsed += epoch_elapsed
 
@@ -355,23 +351,6 @@ def main():
     print(f"Best epoch:      {best_result['best_epoch']}")
     print(f"Validation loss: {best_result['best_validation_loss']:.4f}")
     print(f"Validation acc:  {best_result['best_validation_accuracy']:.2%}")
-
-    checkpoint = torch.load(best_result["checkpoint_path"], map_location=device)
-
-    best_model, _ = load_model_from_checkpoint(
-        checkpoint_path=best_result["checkpoint_path"],
-        device=device,
-    )
-
-    bestLoss, bestAcc = evaluate(
-        model=best_model,
-        data_loader=test_loader,
-        loss_function=loss_function,
-        device=device,
-    )
-    print(f"Best model was from model {checkpoint['experiment_name']}")
-    print(f"Test loss: {bestLoss:.4f}")
-    print(f"Test accuracy: {bestAcc:.2%}")
 
 
 if __name__ == "__main__":
