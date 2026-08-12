@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import csv
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 from tensorboard.backend.event_processing import event_accumulator
-
 
 LOG_DIR = Path("artifacts/p4_cnn/tensorboard")
 OUTPUT_DIR = Path("artifacts/p4_cnn/tensorboard_exports")
@@ -30,9 +30,19 @@ PLOT_TAGS = [
 def find_run_dirs(log_dir: Path) -> list[Path]:
     event_files = log_dir.rglob("events.out.tfevents*")
 
-    return sorted(
-        {event_file.parent for event_file in event_files}
-    )
+    return sorted({event_file.parent for event_file in event_files})
+
+
+def deduplicate_events(events: list) -> list:
+    latest_by_step = {}
+
+    for event in events:
+        current = latest_by_step.get(event.step)
+
+        if current is None or event.wall_time > current.wall_time:
+            latest_by_step[event.step] = event
+
+    return [latest_by_step[step] for step in sorted(latest_by_step)]
 
 
 def load_run(run_dir: Path) -> dict[str, list]:
@@ -45,52 +55,15 @@ def load_run(run_dir: Path) -> dict[str, list]:
 
     accumulator.Reload()
 
-    available_tags = set(
-        accumulator.Tags().get("scalars", [])
-    )
+    available_tags = set(accumulator.Tags().get("scalars", []))
 
     scalars = {}
 
     for tag in TAGS:
         if tag in available_tags:
-            scalars[tag] = accumulator.Scalars(tag)
+            scalars[tag] = deduplicate_events(accumulator.Scalars(tag))
 
     return scalars
-
-
-def export_all_scalars(
-    runs: dict[str, dict[str, list]],
-    output_path: Path,
-) -> None:
-    with output_path.open(
-        "w",
-        newline="",
-        encoding="utf-8",
-    ) as file:
-        writer = csv.writer(file)
-
-        writer.writerow(
-            [
-                "run",
-                "tag",
-                "step",
-                "wall_time",
-                "value",
-            ]
-        )
-
-        for run_name, scalars in runs.items():
-            for tag, events in scalars.items():
-                for event in events:
-                    writer.writerow(
-                        [
-                            run_name,
-                            tag,
-                            event.step,
-                            event.wall_time,
-                            event.value,
-                        ]
-                    )
 
 
 def export_summary(
@@ -157,47 +130,20 @@ def export_summary(
                 key=lambda event: event.value,
             )
 
-            val_accuracy_by_step = {
-                event.step: event.value
-                for event in val_accuracy
-            }
+            val_accuracy_by_step = {event.step: event.value for event in val_accuracy}
 
-            val_accuracy_at_best_loss = (
-                val_accuracy_by_step.get(
-                    best_loss_event.step
-                )
-            )
+            val_accuracy_at_best_loss = val_accuracy_by_step.get(best_loss_event.step)
 
             max_val_accuracy = (
-                max(
-                    event.value
-                    for event in val_accuracy
-                )
-                if val_accuracy
-                else None
+                max(event.value for event in val_accuracy) if val_accuracy else None
             )
 
-            final_train_loss = (
-                train_loss[-1].value
-                if train_loss
-                else None
-            )
+            final_train_loss = train_loss[-1].value if train_loss else None
 
-            final_train_accuracy = (
-                train_accuracy[-1].value
-                if train_accuracy
-                else None
-            )
+            final_train_accuracy = train_accuracy[-1].value if train_accuracy else None
 
-            total_epoch_seconds = sum(
-                event.value
-                for event in epoch_times
-            )
-            time_to_best_seconds = (
-                time_to_best[-1].value
-                if time_to_best
-                else None
-            )
+            total_epoch_seconds = sum(event.value for event in epoch_times)
+            time_to_best_seconds = time_to_best[-1].value if time_to_best else None
 
             writer.writerow(
                 [
@@ -220,9 +166,7 @@ def export_plot(
     tag: str,
     output_dir: Path,
 ) -> None:
-    fig, ax = plt.subplots(
-        figsize=(12, 7)
-    )
+    fig, ax = plt.subplots(figsize=(12, 7))
 
     plotted_runs = 0
 
@@ -232,15 +176,9 @@ def export_plot(
         if not events:
             continue
 
-        steps = [
-            event.step
-            for event in events
-        ]
+        steps = [event.step for event in events]
 
-        values = [
-            event.value
-            for event in events
-        ]
+        values = [event.value for event in events]
 
         ax.plot(
             steps,
@@ -252,9 +190,7 @@ def export_plot(
 
         plotted_runs += 1
 
-    ax.set_title(
-        f"{tag} — {plotted_runs} runs"
-    )
+    ax.set_title(f"{tag} — {plotted_runs} runs")
 
     ax.set_xlabel("Epoch")
     ax.set_ylabel(tag)
@@ -286,24 +222,67 @@ def export_plot(
     plt.close(fig)
 
 
+def export_all_scalars(
+    runs: dict[str, dict[str, list]],
+    output_path: Path,
+) -> None:
+    with output_path.open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as file:
+        writer = csv.writer(file)
+
+        writer.writerow(
+            [
+                "run",
+                "tag",
+                "step",
+                "wall_time",
+                "value",
+            ]
+        )
+
+        for run_name, scalars in runs.items():
+            for tag, events in scalars.items():
+                for event in events:
+                    writer.writerow(
+                        [
+                            run_name,
+                            tag,
+                            event.step,
+                            event.wall_time,
+                            event.value,
+                        ]
+                    )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    return parser.parse_args()
+
+
 def main() -> None:
-    OUTPUT_DIR.mkdir(
+    args = parse_args()
+
+    log_dir = args.input
+    output_dir = args.output_dir
+
+    output_dir.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    run_dirs = find_run_dirs(LOG_DIR)
+    run_dirs = find_run_dirs(log_dir)
 
-    print(
-        f"Found {len(run_dirs)} TensorBoard run directories"
-    )
+    print(f"Found {len(run_dirs)} TensorBoard run directories")
 
     runs = {}
 
     for run_dir in run_dirs:
-        run_name = run_dir.relative_to(
-            LOG_DIR
-        ).as_posix()
+        run_name = run_dir.relative_to(log_dir).as_posix()
 
         scalars = load_run(run_dir)
 
@@ -312,30 +291,26 @@ def main() -> None:
 
         runs[run_name] = scalars
 
-    print(
-        f"Loaded {len(runs)} runs containing scalar data"
-    )
+    print(f"Loaded {len(runs)} runs containing scalar data")
 
     export_all_scalars(
         runs,
-        OUTPUT_DIR / "all_scalars.csv",
+        output_dir / "all_scalars.csv",
     )
 
     export_summary(
         runs,
-        OUTPUT_DIR / "run_summary.csv",
+        output_dir / "run_summary.csv",
     )
 
     for tag in PLOT_TAGS:
         export_plot(
             runs,
             tag,
-            OUTPUT_DIR,
+            output_dir,
         )
 
-    print(
-        f"Exports written to: {OUTPUT_DIR}"
-    )
+    print(f"Exports written to: {output_dir}")
 
 
 if __name__ == "__main__":

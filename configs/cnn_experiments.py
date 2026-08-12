@@ -1,114 +1,124 @@
-
 from __future__ import annotations
+
 from itertools import product
 from typing import Any
 
 ExperimentConfig = dict[str, Any]
+# ---------------------------------------------------------------------
+# 1. REPRESENTATION BASELINE
+# Same network/training recipe; only representation changes.
+# ---------------------------------------------------------------------
 
-BASELINE: list[ExperimentConfig]= [
+BASELINE: list[ExperimentConfig] = [
     {
-      "name": "cnn_1ch_baseline",
-      "model_type": "cnn",
-      "input_ch": 1,
-      "conv_channels": [16, 32],
-      "kernel_size": 3,
-      "padding": 1,
-      "pooling": 0,
-      "fc_hidden": 128,
-      "dropout": 0.0,
-      "learning_rate": 0.001,
-      "batch_size": 128,
-      "weight_decay": 0.0,
-      "epochs": 50,
-      "patience": 10,
-      "min_delta": 0.0,
-      "split_seed": 123,
-      "experiment_seed": 123
+        "name": "cnn_1ch_baseline",
+        "input_ch": 1,
     },
     {
-      "name": "cnn_3ch_baseline",
-      "model_type": "cnn",
-      "input_ch": 3,
-      "conv_channels": [16, 32],
-      "kernel_size": 3,
-      "padding": 1,
-      "pooling": 0,
-      "fc_hidden": 128,
-      "dropout": 0.0,
-      "learning_rate": 0.001,
-      "batch_size": 128,
-      "weight_decay": 0.0,
-      "epochs": 50,
-      "patience": 10,
-      "min_delta": 0.0,
-      "split_seed": 123,
-      "experiment_seed": 123
-    }
-  ]
-
-ARCHITECTURE: list[ExperimentConfig]= [
-     {
-          "name": "cnn_3ch_pool_0",
-          "model_type": "cnn",
-          "input_ch": 3,
-          "conv_channels": [16, 32],
-          "kernel_size": 3,
-          "padding": 1,
-          "pooling": 0,
-          "fc_hidden": 128,
-          "dropout": 0.0,
-          "learning_rate": 0.001,
-          "batch_size": 128,
-          "weight_decay": 0.0,
-          "epochs": 50,
-          "patience": 10,
-          "min_delta": 0.0,
-          "split_seed": 123,
-          "experiment_seed": 123
-        },
-     {
-          "name": "cnn_3ch_pool_1",
-          "model_type": "cnn",
-          "input_ch": 3,
-          "conv_channels": [16, 32],
-          "kernel_size": 3,
-          "padding": 1,
-          "pooling": 1,
-          "fc_hidden": 128,
-          "dropout": 0.0,
-          "learning_rate": 0.001,
-          "batch_size": 128,
-          "weight_decay": 0.0,
-          "epochs": 50,
-          "patience": 10,
-          "min_delta": 0.0,
-          "split_seed": 123,
-          "experiment_seed": 123
-        },
-         {
-              "name": "cnn_3ch_pool_2",
-              "model_type": "cnn",
-              "input_ch": 3,
-              "conv_channels": [16, 32],
-              "kernel_size": 3,
-              "padding": 1,
-              "pooling": 2,
-              "fc_hidden": 128,
-              "dropout": 0.0,
-              "learning_rate": 0.001,
-              "batch_size": 128,
-              "weight_decay": 0.0,
-              "epochs": 50,
-              "patience": 10,
-              "min_delta": 0.0,
-              "split_seed": 123,
-              "experiment_seed": 123
-            }
-     
+        "name": "cnn_3ch_baseline",
+        "input_ch": 3,
+    },
+]
+# ---------------------------------------------------------------------
+# ARCHITECTURE
+# ---------------------------------------------------------------------
+CONV_CHANNELS = [
+    (16, 32),
+    (32, 64),
+    (64, 64),
+    (64, 128),
 ]
 
-FINALISTS = [
-    # A
+POOLING_LEVELS = [0, 1, 2]
+
+KERNEL_PADDING = [
+    (3, 1),
+    (3, 2),
+]
+
+
+ARCHITECTURE: list[ExperimentConfig] = (
+    [
+        {
+            "tag": f"conv_{c1}_{c2}",
+            "conv_channels": [c1, c2],
+        }
+        for c1, c2 in CONV_CHANNELS
+    ]
+    + [
+        {
+            "tag": f"pool{pooling}",
+            "conv_channels": [64, 64],
+            "pooling": pooling,
+        }
+        for pooling in POOLING_LEVELS
+    ]
+    + [
+        {
+            "tag": f"k{kernel}_p{padding}",
+            "conv_channels": [64, 64],
+            "kernel_size": kernel,
+            "padding": padding,
+            "pooling": 1,
+        }
+        for kernel, padding in KERNEL_PADDING
+    ]
+)
+# ---------------------------------------------------------------------
+# 3. CLASSIFICATION HEAD
+# ---------------------------------------------------------------------
+
+FC_HIDDEN = [64, 128]
+DROPOUTS = [0.0, 0.25]
+HEAD: list[ExperimentConfig] = [
+    {
+        "tag": f"fc{fc_hidden}_do{int(dropout * 100)}",
+        "fc_hidden": fc_hidden,
+        "dropout": dropout,
+    }
+    for fc_hidden, dropout in product(FC_HIDDEN, DROPOUTS)
+]
+# ---------------------------------------------------------------------
+# 4. OPTIMIZATION
+# ---------------------------------------------------------------------
+
+LEARNING_RATES = [5e-4, 1e-3, 2e-3]
+BATCH_SIZES = [16, 32]
+
+
+OPTIMIZATION: list[ExperimentConfig] = [
+    {
+        "tag": f"lr{lr:g}_bs{batch_size}",
+        "learning_rate": lr,
+        "batch_size": batch_size,
+    }
+    for lr, batch_size in product(LEARNING_RATES, BATCH_SIZES)
+]
+# ---------------------------------------------------------------------
+# 5. WEIGHT DECAY
+# ---------------------------------------------------------------------
+
+WEIGHT_DECAYS = [
+    ("wd0", 0.0),
+    ("wd1e6", 1e-6),
+    ("wd1e5", 1e-5),
+    ("wd1e4", 1e-4),
+    ("wd3e4", 3e-4),
+    ("wd1e3", 1e-3),
+]
+
+
+WEIGHT_DECAY: list[ExperimentConfig] = [
+    {
+        "tag": tag,
+        "weight_decay": weight_decay,
+    }
+    for tag, weight_decay in WEIGHT_DECAYS
+]
+# ---------------------------------------------------------------------
+# 6. FINALISTS — GAUNTLET V2
+# ---------------------------------------------------------------------
+FINALIST_RECIPES: list[ExperimentConfig] = [
     {
         "tag": "fc64_do0_lr1e3_bs16_wd3e4",
         "fc_hidden": 64,
@@ -117,8 +127,6 @@ FINALISTS = [
         "batch_size": 16,
         "weight_decay": 3e-4,
     },
-
-    # B
     {
         "tag": "fc128_do25_lr5e4_bs32_wd1e3",
         "fc_hidden": 128,
@@ -127,8 +135,6 @@ FINALISTS = [
         "batch_size": 32,
         "weight_decay": 1e-3,
     },
-
-    # C
     {
         "tag": "fc64_do0_lr2e3_bs16_wd1e5",
         "fc_hidden": 64,
@@ -137,8 +143,6 @@ FINALISTS = [
         "batch_size": 16,
         "weight_decay": 1e-5,
     },
-
-    # D
     {
         "tag": "fc128_do0_lr2e3_bs32_wd1e4",
         "fc_hidden": 128,
@@ -164,15 +168,15 @@ FINAL_CNN_BASE = {
 
 DATASET_SEEDS = [
     123,
-    #271,
-   # 389,
-   # 467,
-   # 593,
-   # 719,
-   # 839,
-    #947,
-    #1061,
-   # 1223,
+    271,
+    389,
+    467,
+    593,
+    719,
+    839,
+    947,
+    1061,
+    1223,
 ]
 
 EXPERIMENT_SEEDS = [
@@ -181,310 +185,187 @@ EXPERIMENT_SEEDS = [
     307,
     401,
     503,
-   # 601,
-   # 701,
-   # 809,
-   # 907,
-  #  1009,
-]
-
-WEIGHT_DECAYS = [
-    0.0,
-    1e-6,
-    1e-5,
-    1e-4,
-    3e-4,
-    1e-3,
+    601,
+    701,
+    809,
+    907,
+    1009,
 ]
 
 
-WEIGHT_DECAY_SEEDS = [123, 211, 307, 401, 503]
-
-WEIGHT_DECAY_CONFIGS: list[ExperimentConfig] = [
+FINAL_CONFIGS: list[ExperimentConfig] = [
     {
         **FINAL_CNN_BASE,
-        **finalist,
-        "name": (
-            f"{finalist['tag']}"
-            f"_wd{weight_decay:g}"
-        ),
-        "weight_decay": weight_decay,
-        "dataset_seed": 123,
-        "experiment_seed": 123,
-    }
-    for finalist, weight_decay in product(
-        FINALISTS,
-        WEIGHT_DECAY_SEEDS,
-    )
-]
-
-
-FINAL_CONFIGS:list[ExperimentConfig]= [
-    {
-        **FINAL_CNN_BASE,
-        **finalist,
-        "name": (
-            f"{finalist['tag']}"
-            f"_ds{dataset_seed}"
-            f"_es{experiment_seed}"
-        ),
+        **recipe,
+        "name": (f"{recipe['tag']}_ds{dataset_seed}_es{experiment_seed}"),
         "dataset_seed": dataset_seed,
         "experiment_seed": experiment_seed,
     }
-    for finalist, dataset_seed, experiment_seed in product(
-        FINALISTS,
+    for recipe, dataset_seed, experiment_seed in product(
+        FINALIST_RECIPES,
         DATASET_SEEDS,
         EXPERIMENT_SEEDS,
     )
 ]
 
 
-EXPECTED_FINAL_RUNS = (
-    len(FINALISTS)
-    * len(DATASET_SEEDS)
-    * len(EXPERIMENT_SEEDS)
-)
-
+EXPECTED_FINAL_RUNS = len(FINALIST_RECIPES) * len(DATASET_SEEDS) * len(EXPERIMENT_SEEDS)
 assert len(FINAL_CONFIGS) == EXPECTED_FINAL_RUNS
-
 final_names = [config["name"] for config in FINAL_CONFIGS]
 assert len(final_names) == len(set(final_names))
 
 
-
-SURVIVORS = [
-
+PRE_WD_FINALISTS: list[ExperimentConfig] = [
     {
-    "tag": "fc128_do0",
-    "conv_channels": [64, 64],
-    "fc_hidden": 128,
-    "dropout": 0.0,
+        "tag": "fc64_do0_lr1e3_bs16",
+        "fc_hidden": 64,
+        "dropout": 0.0,
+        "learning_rate": 1e-3,
+        "batch_size": 16,
+    },
+    {
+        "tag": "fc128_do25_lr5e4_bs32",
+        "fc_hidden": 128,
+        "dropout": 0.25,
+        "learning_rate": 5e-4,
+        "batch_size": 32,
+    },
+    {
+        "tag": "fc64_do0_lr2e3_bs16",
+        "fc_hidden": 64,
+        "dropout": 0.0,
+        "learning_rate": 2e-3,
+        "batch_size": 16,
+    },
+    {
+        "tag": "fc128_do0_lr2e3_bs32",
+        "fc_hidden": 128,
+        "dropout": 0.0,
+        "learning_rate": 2e-3,
+        "batch_size": 32,
+    },
+]
+
+FINALIST_WEIGHT_DECAY: list[ExperimentConfig] = [
+    {
+        **finalist,
+        "tag": f"{finalist['tag']}_{wd_tag}",
+        "weight_decay": weight_decay,
+    }
+    for finalist, (wd_tag, weight_decay) in product(
+        PRE_WD_FINALISTS,
+        WEIGHT_DECAYS,
+    )
+]
+
+assert len(FINALIST_WEIGHT_DECAY) == 24
+
+
+CONFIG_SETS = {
+    "baseline": BASELINE,
+    "architecture": ARCHITECTURE,
+    "head": HEAD,
+    "optimization": OPTIMIZATION,
+    "weight_decay": WEIGHT_DECAY,
+    "weight_decay_finalists": FINALIST_WEIGHT_DECAY,
+    "finals": FINAL_CONFIGS,
 }
 
-]
-
-LEARNING_RATES = [
-    5e-4,
-    7.5e-4,
-    1e-3,
-    1.25e-3,
-    1.5e-3,
-    2e-3,
-]
-
-BATCH_SIZES = [
-    16,
-    32,
-    64,
-    128,
-    256,
-]
-
-SWEEP_CONFIG: list[ExperimentConfig] = [
-    {
-        "name": (
-            f"cnn_64_64_{survivor['tag']}"
-            f"_lr{lr:g}_bs{batch_size}"
-        ),
-        "model_type": "cnn",
+CONFIG_BASES: dict[str, ExperimentConfig] = {
+    "baseline": {},
+    "architecture": {
+        "input_ch": 3,
+    },
+    "head": {
         "input_ch": 3,
         "conv_channels": [64, 64],
         "kernel_size": 3,
         "padding": 2,
         "pooling": 1,
-        "fc_hidden": survivor["fc_hidden"],
-        "dropout": survivor["dropout"],
-        "learning_rate": lr,
-        "batch_size": batch_size,
-        "weight_decay": 0.0,
-        "epochs": 50,
-        "patience": 10,
-        "min_delta": 0.0,
-        "split_seed": 123,
-        "experiment_seed": 123,
-    }
-    for survivor in SURVIVORS
-    for lr in LEARNING_RATES
-    for batch_size in BATCH_SIZES
-]
+    },
+    "optimization": {
+        "input_ch": 3,
+        "conv_channels": [64, 64],
+        "kernel_size": 3,
+        "padding": 2,
+        "pooling": 1,
+        "fc_hidden": 128,
+        "dropout": 0.0,
+    },
+    "weight_decay": {
+        "input_ch": 3,
+        "conv_channels": [64, 64],
+        "kernel_size": 3,
+        "padding": 2,
+        "pooling": 1,
+        "fc_hidden": 128,
+        "dropout": 0.0,
+        "learning_rate": 1e-3,
+        "batch_size": 128,
+    },
+    "weight_decay_finalists": {
+        "input_ch": 3,
+        "conv_channels": [64, 64],
+        "kernel_size": 3,
+        "padding": 2,
+        "pooling": 1,
+    },
+}
+
 
 TRAINING_DEFAULTS: ExperimentConfig = {
+    "model_type": "cnn",
+    "conv_channels": [16, 32],
+    "kernel_size": 3,
+    "padding": 1,
+    "pooling": 0,
+    "fc_hidden": 128,
+    "dropout": 0.0,
+    "learning_rate": 1e-3,
+    "batch_size": 128,
+    "weight_decay": 0.0,
     "max_epochs": 200,
     "patience": 10,
     "min_delta": 0.0,
+    "dataset_seed": 123,
+    "split_seed": 123,
+    "experiment_seed": 123,
 }
 
-GAUNTLET: ExperimentConfig= [
-          {
-              "name": "cnn_3ch_pool_1",
-              "model_type": "cnn",
-              "input_ch": 3,
-              "conv_channels": [16, 32],
-              "kernel_size": 3,
-              "padding": 1,
-              "pooling": 1,
-              "fc_hidden": 128,
-              "dropout": 0.0,
-              "learning_rate": 0.001,
-              "batch_size": 128,
-              "weight_decay": 0.0,
-              "epochs": 50,
-              "patience": 10,
-              "min_delta": 0.0,
-              "split_seed": 123,
-              "experiment_seed": 123
-            },
-         {
-                "name": "cnn_3ch_pool1_k3_p2",
-                "model_type": "cnn",
-                "input_ch": 3,
-                "conv_channels": [16, 32],
-                "kernel_size": 3,
-                "padding": 2,
-                "pooling": 1,
-                "fc_hidden": 128,
-                "dropout": 0.0,
-                "learning_rate": 0.001,
-                "batch_size": 128,
-                "weight_decay": 0.0,
-                "epochs": 50,
-                "patience": 10,
-                "min_delta": 0.0,
-                "split_seed": 123,
-                "experiment_seed": 123,
-            },
-         {
-                    "name": "cnn_filters_32_32",
-                    "model_type": "cnn",
-                    "input_ch": 3,
-                    "conv_channels": [32, 32],
-                    "kernel_size": 3,
-                    "padding": 2,
-                    "pooling": 1,
-                    "fc_hidden": 128,
-                    "dropout": 0.0,
-                    "learning_rate": 0.001,
-                    "batch_size": 128,
-                    "weight_decay": 0.0,
-                    "epochs": 50,
-                    "patience": 10,
-                    "min_delta": 0.0,
-                    "split_seed": 123,
-                    "experiment_seed": 123,
-                }, {
-                        "name": "cnn_filters_64_64",
-                        "model_type": "cnn",
-                        "input_ch": 3,
-                        "conv_channels": [64, 64],
-                        "kernel_size": 3,
-                        "padding": 2,
-                        "pooling": 1,
-                        "fc_hidden": 128,
-                        "dropout": 0.0,
-                        "learning_rate": 0.001,
-                        "batch_size": 128,
-                        "weight_decay": 0.0,
-                        "epochs": 50,
-                        "patience": 10,
-                        "min_delta": 0.0,
-                        "split_seed": 123,
-                        "experiment_seed": 123,
-                    },
-             {
-                    "name": "cnn_64_64_fc64",
-                    "model_type": "cnn",
-                    "input_ch": 3,
-                    "conv_channels": [64, 64],
-                    "kernel_size": 3,
-                    "padding": 2,
-                    "pooling": 1,
-                    "fc_hidden": 64,
-                    "dropout": 0.0,
-                    "learning_rate": 0.001,
-                    "batch_size": 128,
-                    "weight_decay": 0.0,
-                    "epochs": 50,
-                    "patience": 10,
-                    "min_delta": 0.0,
-                    "split_seed": 123,
-                    "experiment_seed": 123,
-                },
-                {
-                    "name": "cnn_64_64_fc128",
-                    "model_type": "cnn",
-                    "input_ch": 3,
-                    "conv_channels": [64, 64],
-                    "kernel_size": 3,
-                    "padding": 2,
-                    "pooling": 1,
-                    "fc_hidden": 128,
-                    "dropout": 0.0,
-                    "learning_rate": 0.001,
-                    "batch_size": 128,
-                    "weight_decay": 0.0,
-                    "epochs": 50,
-                    "patience": 10,
-                    "min_delta": 0.0,
-                    "split_seed": 123,
-                    "experiment_seed": 123,
-                },
-                {
-                        "name": "cnn_64_64_fc128_do25",
-                        "model_type": "cnn",
-                        "input_ch": 3,
-                        "conv_channels": [64, 64],
-                        "kernel_size": 3,
-                        "padding": 2,
-                        "pooling": 1,
-                        "fc_hidden": 128,
-                        "dropout": 0.25,
-                        "learning_rate": 0.001,
-                        "batch_size": 128,
-                        "weight_decay": 0.0,
-                        "epochs": 50,
-                        "patience": 10,
-                        "min_delta": 0.0,
-                        "split_seed": 123,
-                        "experiment_seed": 123,
-                    },
-                      {
-                            "name": "cnn_64_64_fc64_do0",
-                            "model_type": "cnn",
-                            "input_ch": 3,
-                            "conv_channels": [64, 64],
-                            "kernel_size": 3,
-                            "padding": 2,
-                            "pooling": 1,
-                            "fc_hidden": 64,
-                            "dropout": 0.0,
-                            "learning_rate": 0.001,
-                            "batch_size": 128,
-                            "weight_decay": 0.0,
-                            "epochs": 50,
-                            "patience": 10,
-                            "min_delta": 0.0,
-                            "split_seed": 123,
-                            "experiment_seed": 123,
-                        },
-]
+
+def get_experiment_configs(
+    config_set: str,
+) -> list[ExperimentConfig]:
+    try:
+        configs = CONFIG_SETS[config_set]
+    except KeyError:
+        raise ValueError(f"Unknown config set: {config_set}") from None
+
+    stage_base = CONFIG_BASES.get(config_set, {})
+
+    return [
+        resolve_config(
+            {
+                **stage_base,
+                **config,
+            }
+        )
+        for config in configs
+    ]
+
+
 def resolve_config(config: ExperimentConfig) -> ExperimentConfig:
-    return {
+    resolved = {
         **TRAINING_DEFAULTS,
         **config,
     }
 
+    if "name" not in resolved:
+        try:
+            resolved["name"] = resolved["tag"]
+        except KeyError:
+            raise ValueError(
+                "Experiment config must define either 'name' or 'tag'"
+            ) from None
 
-def get_experiment_configs(config_set: str) -> list[ExperimentConfig]:
-    if config_set == "baseline":
-        return [resolve_config(config.copy()) for config in BASELINE]
-    if config_set == "sweep":
-        return [resolve_config(config.copy()) for config in SWEEP_CONFIG]
-    if config_set == "architecture":
-            return [resolve_config(config.copy()) for config in ARCHITECTURE]
-    if config_set == "finals":
-        return [resolve_config(config.copy()) for config in FINAL_CONFIGS]    
-    if config_set == "weights":
-        return [resolve_config(config.copy()) for config in WEIGHT_DECAY_CONFIGS]    
-    raise ValueError(
-        f"Unknown config set: {config_set}"
-    )
+    return resolved

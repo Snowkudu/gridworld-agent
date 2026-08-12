@@ -1,53 +1,47 @@
 from __future__ import annotations
-from pathlib import Path
+
 import argparse
+import time
+from pathlib import Path
+
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
 from torch.optim import Adam
-from configs.cnn_experiments import get_experiment_configs
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
+from configs.cnn_experiments import DATASET_SEEDS, get_experiment_configs
 from data.dataset import extract_dataset_torch, split_dataset
 from data.representation import to_cnn_1ch, to_cnn_3ch
 from environment.environment import init_world
 from models.checkpoint import load_model_from_checkpoint
 from models.cnn import CNN
+from scripts.generate_dataset import (
+    generate_dataset,  # use your actual generator import
+)
 from training.engine import evaluate, train_one_epoch
 from training.metrics import save_json
 from utils.reproducibility import create_generator, seed_everything
-import time
-from torch.utils.tensorboard import SummaryWriter
-
-
-from pathlib import Path
-
-from configs.cnn_experiments import DATASET_SEEDS
-from scripts.generate_dataset import generate_dataset  # use your actual generator import
-
 
 DATA_DIR = Path("data/raw")
 
 
 def ensure_final_datasets() -> None:
     for seed in DATASET_SEEDS:
-        dataset_path = (
-            DATA_DIR
-            / f"gridworld_2000ep_200ms_{seed}seed.npz"
-        )
+        dataset_path = DATA_DIR / f"gridworld_2000ep_200ms_{seed}seed.npz"
 
         if dataset_path.exists():
-            print(f"Dataset exists: {dataset_path}")
+            # print(f"Dataset exists: {dataset_path}")
             continue
-        
+
         print(f"Generating dataset seed={seed}")
-        env= init_world(seed=seed,max_steps=200)
+        env = init_world(seed=seed, max_steps=200)
         generate_dataset(
             env=env,
             episodes=2000,
             out_path=dataset_path,
             seed=seed,
         )
-
-
 
 
 def sync_cuda(device: torch.device) -> None:
@@ -59,73 +53,66 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config-set",
-        choices=("baseline", "architecture","sweep","finals","weights"),
+        choices=(
+            "baseline",
+            "architecture",
+            "sweep",
+            "finals",
+            "weight_decay",
+            "head",
+            "optimization",
+            "weight_decay_finalists",
+        ),
         default="baseline",
     )
     return parser.parse_args()
 
 
-
-
 def main():
 
-    args=parse_args()
-    experiment_configs= get_experiment_configs(args.config_set)
-    epochs=50
+    args = parse_args()
+    experiment_configs = get_experiment_configs(args.config_set)
     epoch_history: list[dict[str, object]] = []
 
-    experiment_name="cnn_first_try"
-    artifact_root = Path("artifacts") / "p4_cnn"
+    artifact_root = Path("artifacts") / "p4_cnn" / args.config_set
     artifact_root.mkdir(parents=True, exist_ok=True)
-    run_dir = artifact_root / experiment_name
-    metrics_path = run_dir / "metrics.json"
-    checkpoint_path = run_dir / "best_model.pt"
-    # epochs_without_improvement=best_epoch=0
-    # patience=10
-    #min_delta=0.0
+
     best_val_loss = float("inf")
     best_val_accuracy = 0.0
     experiment_results = []
-    
-    
 
-    
-   
-  
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     loss_function = nn.CrossEntropyLoss()
-    
-    for config in experiment_configs:
 
+    for config in experiment_configs:
         input_ch = int(config["input_ch"])
         batch_size = int(config["batch_size"])
         max_epochs = int(config["max_epochs"])
-        conv_channels=  tuple(config["conv_channels"])
-        kernel_size= int(config["kernel_size"])
-        fc_hidden=int(config["fc_hidden"])
-        dropout=float(config["dropout"])
+        conv_channels = tuple(config["conv_channels"])
+        kernel_size = int(config["kernel_size"])
+        fc_hidden = int(config["fc_hidden"])
+        dropout = float(config["dropout"])
         patience = int(config["patience"])
         min_delta = float(config["min_delta"])
         pooling = int(config["pooling"])
         padding = int(config["padding"])
-        dataset_seed= int(config["dataset_seed"])
-        split_seed= int(config["split_seed"])
-        experiment_seed= int(config["experiment_seed"])
+        dataset_seed = int(config["dataset_seed"])
+        split_seed = int(config["split_seed"])
+        experiment_seed = int(config["experiment_seed"])
 
         experiment_name = config["name"]
         best_val_loss = float("inf")
         best_val_accuracy = 0.0
         best_epoch = 0
         dataset_path = (
-            Path("data/raw")
-            / f"gridworld_2000ep_200ms_{dataset_seed}seed.npz"
+            Path("data/raw") / f"gridworld_2000ep_200ms_{dataset_seed}seed.npz"
         )
         tensor_Xtemp, tensor_y = extract_dataset_torch(dataset_path)
 
         run_dir = artifact_root / experiment_name
         run_dir.mkdir(parents=True, exist_ok=True)
 
-        checkpoint_path = run_dir / "best_model.pt"
+        checkpoint_path = run_dir / "checkpoint.pt"
         metrics_path = run_dir / "metrics.json"
 
         seed_everything(experiment_seed)
@@ -136,16 +123,22 @@ def main():
         print(f"Starting experiment: {experiment_name}")
         print("=" * 80)
 
-        if input_ch==1:
-                tensor_X=to_cnn_1ch(tensor_Xtemp)
+        if input_ch == 1:
+            tensor_X = to_cnn_1ch(tensor_Xtemp)
         elif input_ch == 3:
-                tensor_X=to_cnn_3ch(tensor_Xtemp)
+            tensor_X = to_cnn_3ch(tensor_Xtemp)
         splits = split_dataset(tensor_X, tensor_y, seed=split_seed)
-        train_loader = DataLoader(splits.train,batch_size=batch_size, shuffle=True,generator=train_generator)
-        val_loader = DataLoader(splits.val, batch_size=batch_size, shuffle=False,generator=train_generator)
-        test_loader = DataLoader(splits.test, batch_size=batch_size, shuffle=False,generator=train_generator)
+        train_loader = DataLoader(
+            splits.train, batch_size=batch_size, shuffle=True, generator=train_generator
+        )
+        val_loader = DataLoader(
+            splits.val, batch_size=batch_size, shuffle=False, generator=train_generator
+        )
+        test_loader = DataLoader(
+            splits.test, batch_size=batch_size, shuffle=False, generator=train_generator
+        )
 
-        model=CNN(
+        model = CNN(
             input_ch=input_ch,
             conv_channels=conv_channels,
             kernel_size=kernel_size,
@@ -153,29 +146,24 @@ def main():
             dropout=dropout,
             padding=padding,
             fc_hidden=fc_hidden,
-                  ).to(device)
-      
+        ).to(device)
+
         optimizer = Adam(
-                        model.parameters(),
-                        lr=config["learning_rate"],
-                        weight_decay=config["weight_decay"],
+            model.parameters(),
+            lr=config["learning_rate"],
+            weight_decay=config["weight_decay"],
         )
         train_loader = DataLoader(
-                    splits.train,
-                    batch_size=config["batch_size"],
-                    shuffle=True,
-                    generator=train_generator,
-                )
+            splits.train,
+            batch_size=config["batch_size"],
+            shuffle=True,
+            generator=train_generator,
+        )
 
         sync_cuda(device)
-        experiment_start=time.perf_counter()
-        tensorboard_dir = (
-            Path("artifacts")
-            / "p4_cnn"
-            / "tensorboard"
-            / config["name"]
-        )
-        cumulative_elapsed=0
+        experiment_start = time.perf_counter()
+        tensorboard_dir = artifact_root / "tensorboard" / config["name"]
+        cumulative_elapsed = 0
         writer = SummaryWriter(log_dir=tensorboard_dir)
         writer.add_text(
             "Run/config",
@@ -193,23 +181,23 @@ def main():
             0,
         )
 
-        for epoch in range(1,max_epochs+1):
+        for epoch in range(1, max_epochs + 1):
             sync_cuda(device)
-            epoch_start=time.perf_counter()
+            epoch_start = time.perf_counter()
             train_loss, train_accuracy = train_one_epoch(
                 model=model,
                 data_loader=train_loader,
                 loss_function=loss_function,
                 optimizer=optimizer,
                 device=device,
-                )
-            
+            )
+
             validation_loss, validation_accuracy = evaluate(
                 model=model,
                 data_loader=val_loader,
                 loss_function=loss_function,
                 device=device,
-                )
+            )
 
             sync_cuda(device)
             epoch_elapsed = time.perf_counter() - epoch_start
@@ -218,38 +206,38 @@ def main():
 
             epoch_history.append(
                 {
-                "epoch": epoch,
-                "train_loss": train_loss,
-                "train_accuracy": train_accuracy,
-                "validation_loss": validation_loss,
-                "validation_accuracy": validation_accuracy,
-                "elapsed_seconds": epoch_elapsed,
+                    "epoch": epoch,
+                    "train_loss": train_loss,
+                    "train_accuracy": train_accuracy,
+                    "validation_loss": validation_loss,
+                    "validation_accuracy": validation_accuracy,
+                    "elapsed_seconds": epoch_elapsed,
                 }
             )
             if validation_loss < best_val_loss - min_delta:
-                    best_val_loss = validation_loss
-                    best_val_accuracy = validation_accuracy
-                    best_epoch = epoch
-                    epochs_without_improvement = 0
-                    best_time_to_checkpoint = cumulative_elapsed
-                    torch.save(
-                        {
-                            "experiment_name": experiment_name,
-                            "model_type": "cnn",
-                            "config": config.copy(),
-                            "dataset_seed": dataset_seed,
-                            "split_seed": split_seed,
-                            "experiment_seed": experiment_seed,
-                            "epoch": epoch,
-                            "model_state_dict": model.state_dict(),
-                            "optimizer_state_dict": optimizer.state_dict(),
-                            "train_accuracy": train_accuracy,
-                            "train_loss": train_loss,
-                            "validation_loss": validation_loss,
-                            "validation_accuracy": validation_accuracy,
-                        },
-                        checkpoint_path,
-                    )
+                best_val_loss = validation_loss
+                best_val_accuracy = validation_accuracy
+                best_epoch = epoch
+                epochs_without_improvement = 0
+                best_time_to_checkpoint = cumulative_elapsed
+                torch.save(
+                    {
+                        "experiment_name": experiment_name,
+                        "model_type": "cnn",
+                        "config": config.copy(),
+                        "dataset_seed": dataset_seed,
+                        "split_seed": split_seed,
+                        "experiment_seed": experiment_seed,
+                        "epoch": epoch,
+                        "model_state_dict": model.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "train_accuracy": train_accuracy,
+                        "train_loss": train_loss,
+                        "validation_loss": validation_loss,
+                        "validation_accuracy": validation_accuracy,
+                    },
+                    checkpoint_path,
+                )
             else:
                 epochs_without_improvement += 1
             if epochs_without_improvement >= patience:
@@ -258,8 +246,8 @@ def main():
             print(
                 f"{experiment_name} | "
                 f"epoch {epoch:02d}/{max_epochs} | "
-               # f"train loss={train_loss:.4f}, "
-               # f"train acc={train_accuracy:.2%} | "
+                # f"train loss={train_loss:.4f}, "
+                # f"train acc={train_accuracy:.2%} | "
                 f"val loss={validation_loss:.4f}, "
                 f"val acc={validation_accuracy:.2%}"
             )
@@ -291,57 +279,58 @@ def main():
                 "Performance/epoch_seconds",
                 epoch_elapsed,
                 epoch,
-            )  
+            )
             writer.add_scalar(
                 "Performance/cumulative_seconds",
                 cumulative_elapsed,
                 epoch,
-            )         
+            )
 
-        writer.close()
         sync_cuda(device)
         experiment_elapsed = time.perf_counter() - experiment_start
 
         seconds_per_epoch = experiment_elapsed / len(epoch_history)
         writer.add_scalar(
-                        "Performance/time_to_best_seconds",
-                        best_time_to_checkpoint,
-                        best_epoch,
-                    )
+            "Performance/time_to_best_seconds",
+            best_time_to_checkpoint,
+            best_epoch,
+        )
+        writer.flush()
+        writer.close()
         save_json(
-                    metrics_path,
-                    {
-                        "experiment_name": experiment_name,
-                        "config": config,
-                        "dataset_seed":dataset_seed,
-                        "split_seed": split_seed,
-                        "experiment_seed": experiment_seed,
-                        "epochs_completed": len(epoch_history),
-                        "early_stopped": len(epoch_history) < epochs,
-                        "patience": patience,
-                        "min_delta": min_delta,
-                        "best_epoch": best_epoch,
-                        "best_validation_loss": best_val_loss,
-                        "best_validation_accuracy": best_val_accuracy,
-                        "history": epoch_history,
-                        "elapsed_seconds": experiment_elapsed,
-                        "seconds_per_epoch": seconds_per_epoch,
-                    },
-                )        
+            metrics_path,
+            {
+                "experiment_name": experiment_name,
+                "config": config,
+                "dataset_seed": dataset_seed,
+                "split_seed": split_seed,
+                "experiment_seed": experiment_seed,
+                "epochs_completed": len(epoch_history),
+                "early_stopped": len(epoch_history) < max_epochs,
+                "patience": patience,
+                "min_delta": min_delta,
+                "best_epoch": best_epoch,
+                "best_validation_loss": best_val_loss,
+                "best_validation_accuracy": best_val_accuracy,
+                "history": epoch_history,
+                "elapsed_seconds": experiment_elapsed,
+                "seconds_per_epoch": seconds_per_epoch,
+            },
+        )
         experiment_results.append(
-                    {
-                        "name": experiment_name,
-                        "dataset_seed": dataset_seed,
-                        "experiment_seed": experiment_seed,
-                        "split_seed": split_seed,
-                        "checkpoint_path": checkpoint_path,
-                        "best_epoch": best_epoch,
-                        "best_validation_loss": best_val_loss,
-                        "best_validation_accuracy": best_val_accuracy,
-                        "elapsed_seconds": experiment_elapsed,
-                        "time_to_best_seconds": best_time_to_checkpoint,
-                    }
-                )
+            {
+                "name": experiment_name,
+                "dataset_seed": dataset_seed,
+                "experiment_seed": experiment_seed,
+                "split_seed": split_seed,
+                "checkpoint_path": checkpoint_path,
+                "best_epoch": best_epoch,
+                "best_validation_loss": best_val_loss,
+                "best_validation_accuracy": best_val_accuracy,
+                "elapsed_seconds": experiment_elapsed,
+                "time_to_best_seconds": best_time_to_checkpoint,
+            }
+        )
 
     best_result = min(
         experiment_results,
@@ -359,8 +348,7 @@ def main():
             f"val loss={result['best_validation_loss']:.4f} | "
             f"val acc={result['best_validation_accuracy']:.2%}"
             f"| time={result['elapsed_seconds']:.1f}s"
-)
-        
+        )
 
     print("\nSelected model:")
     print(f"Name:            {best_result['name']}")
@@ -368,30 +356,24 @@ def main():
     print(f"Validation loss: {best_result['best_validation_loss']:.4f}")
     print(f"Validation acc:  {best_result['best_validation_accuracy']:.2%}")
 
-
-
-
-
-
-
     checkpoint = torch.load(best_result["checkpoint_path"], map_location=device)
-    
-    best_model, best_checkpoint = load_model_from_checkpoint(
-            checkpoint_path=best_result["checkpoint_path"],
-            device=device,
-        )
+
+    best_model, _ = load_model_from_checkpoint(
+        checkpoint_path=best_result["checkpoint_path"],
+        device=device,
+    )
 
     bestLoss, bestAcc = evaluate(
-            model=best_model,
-            data_loader=test_loader,
-            loss_function=loss_function,
-            device=device,
-        )
+        model=best_model,
+        data_loader=test_loader,
+        loss_function=loss_function,
+        device=device,
+    )
     print(f"Best model was from model {checkpoint['experiment_name']}")
     print(f"Test loss: {bestLoss:.4f}")
     print(f"Test accuracy: {bestAcc:.2%}")
-    
+
 
 if __name__ == "__main__":
-        ensure_final_datasets()
-        raise SystemExit(main())
+    ensure_final_datasets()
+    raise SystemExit(main())

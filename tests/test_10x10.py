@@ -524,7 +524,7 @@ def test_rescued_goal_is_success_but_not_autonomous(
     monkeypatch.setattr(
         evaluate_module,
         "predict_logits",
-        lambda model, state, device: torch.tensor([5.0, 0.0, 0.0, 0.0]),
+        lambda model, state, device, config: torch.tensor([5.0, 0.0, 0.0, 0.0]),
     )
 
     # Oracle says RIGHT, therefore disagreement triggers rescue.
@@ -541,10 +541,26 @@ def test_rescued_goal_is_success_but_not_autonomous(
         lambda logits, env: RIGHT,
     )
 
+    monkeypatch.setattr(
+        evaluate_module.OraclePolicy,
+        "select_action",
+        lambda env: RIGHT,
+    )
+
+    monkeypatch.setattr(
+        evaluate_module,
+        "random_logit",
+        lambda logits, env: RIGHT,
+    )
+
     stats = run_headless_eval(
         env=env,
-        model=object(),
+        model=torch.nn.Identity(),
         device=torch.device("cpu"),
+        config={
+            "model_type": "mlp",
+        },
+        mode="headless",
     )
 
     assert stats["success"] is True
@@ -565,7 +581,7 @@ def test_headless_action_accounting(
     monkeypatch.setattr(
         evaluate_module,
         "predict_logits",
-        lambda model, state, device: torch.tensor([0.0, 0.0, 0.0, 5.0]),
+        lambda model, state, device, config: torch.tensor([5.0, 0.0, 0.0, 0.0]),
     )
 
     monkeypatch.setattr(
@@ -578,6 +594,12 @@ def test_headless_action_accounting(
         env=env,
         model=object(),
         device=torch.device("cpu"),
+        config={
+            "model_type": "mlp",
+        },
+        mode="headless",
     )
 
-    assert stats["steps"] == (stats["oracle_matches"] + stats["random_rescues"])
+    assert stats["steps"] == (
+        stats["oracle_matches"] + stats["random_rescues"] + stats["disagreements"]
+    )

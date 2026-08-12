@@ -19,6 +19,26 @@ best_mlp.pt
 data/models/*.pt
 artifacts/p2_mlp/*
 
+# TensorBoard raw logs
+events.out.tfevents.*
+
+# ML checkpoints / exported model binaries
+*.pt
+*.pth
+
+#p4 artifacts
+artifacts/p4_cnn/*
+!artifacts/p4_cnn/story/
+!artifacts/p4_cnn/story/**
+
+artifacts/p4_cnn_gauntlet/
+events.out.tfevents.*
+
+# Temporary evaluation output
+results/p3_eval/fc*_ds*_es*.json
+
+
+
 # Keep the directory in Git
 !data/raw/.gitkeep
 !data/models/.gitkeep

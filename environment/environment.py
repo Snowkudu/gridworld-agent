@@ -9,7 +9,7 @@ from environment.rewards import manhattan_shaped_reward
 # send the output to pygame
 
 
-def init_world(seed: int,max_steps: int=200) -> GridWorld:
+def init_world(seed: int, max_steps: int = 200) -> GridWorld:
     env = GridWorld(10, 0.3, manhattan_shaped_reward, max_steps, seed)
     env.reset()
     return env

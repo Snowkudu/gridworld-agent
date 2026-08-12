@@ -3,13 +3,14 @@ from typing import Any
 
 import torch
 from torch import nn
+
 from models.cnn import CNN
 from models.mlp import MLP
 
 
 def build_model_from_config(config: dict[str, Any]) -> nn.Module:
-    type= config.get("model_type","mlp")
-    if type== "mlp":
+    type = config.get("model_type", "mlp")
+    if type == "mlp":
         return MLP(
             input_size=int(config.get("input_size", 100)),
             hidden_sizes=tuple(config["hidden_sizes"]),
@@ -24,7 +25,7 @@ def build_model_from_config(config: dict[str, Any]) -> nn.Module:
             padding=int(config.get("padding", 1)),
             pooling=int(config.get("pooling", 0)),
             dropout=float(config.get("dropout", 0.0)),
-            fc_hidden=int(config.get("fc_hidden",128))
+            fc_hidden=int(config.get("fc_hidden", 128)),
         )
     raise ValueError(f"Unknown model_type: {type}")
 

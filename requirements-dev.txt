@@ -3,3 +3,10 @@ pytest==9.1.1
 ruff==0.16.1
 torch==2.10.0
 pygame-ce==2.5.7
+pandas == 3.0.5
+tensorboard== 2.21.0
+netron== 9.2.1
+onnx == 1.22.0
+onnxscript== 0.7.1
+onnxruntime ==1.28.0
+netron == 9.2.1
