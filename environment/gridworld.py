@@ -1,15 +1,16 @@
 import numpy as np
 import torch
 
-from environment.pathfinding import isSolvable
+from environment.pathfinding import _bfs_distance_from_goal, isSolvable,INF
 from policies.actions import AGENT, GOAL, OBSTACLE, actions
 
 
 class GridWorld:
     def __init__(
-        self, grid_size, obstaclesPercent, rewards_fn, maxsteps, seed: int | None = None
+        self, grid_size, obstaclesPercent, rewards_fn, maxsteps, seed: int | None = None,
+        min_solution_steps:int=0,
     ):  # Constructor with randoms start and finish.
-        self.reward = 0
+        self.reward = 0.0
         self.grid_size = grid_size
         self.RowMax, self.ColMax = grid_size, grid_size
         self.countobstacles = int((grid_size * grid_size) * obstaclesPercent)
@@ -19,6 +20,8 @@ class GridWorld:
         self.reward_fn = rewards_fn
         self.seed = seed
         self.rng = np.random.default_rng(self.seed)
+        self.min_solution_steps=min_solution_steps
+        self.solution_steps: int | None = None
 
     def initGrid(self):  # Init an empty grid with start and finish.
         self.grid = np.zeros((self.grid_size, self.grid_size))
@@ -40,41 +43,115 @@ class GridWorld:
         self.grid[self.goal_state] = 2
         # self.grid[self.start_state]=1
 
-    def reset(
-        self,
-    ):  # Place obstacles until we get a solvable grid. Clear grid each attempt.(Start/finish fixed) nyi
-        self.initGrid()  # init grid with start and finish
-        self.state = self.start_state
-        attempts = 0
+    def reset(self):
+        """
+        Generate a solvable world.
+
+        Historical behaviour is preserved when min_solution_steps == 0:
+        - choose start/goal
+        - reroll obstacles until that pair is solvable
+
+        When a solvable world is shorter than min_solution_steps:
+        - reject the start/goal pair
+        - generate a new pair
+        """
+
         self.currentsteps = 0
         self.reward = 0
+        self.solution_steps = None
+
+        world_attempts = 0
+
         while True:
-            attempts += 1
-            # Clear grid and re-place start/goal
-            self.grid = np.zeros((self.grid_size, self.grid_size))
-            self.grid[self.goal_state] = 2
-            # self.grid[self.start_state] = 1
+            world_attempts += 1
 
-            # Generate unique obstacle positions that don't overlap start/goal
-            obs_set = set()
-            while len(obs_set) < self.countobstacles:
-                r = self.rng.integers(0, self.grid_size)
-                c = self.rng.integers(0, self.grid_size)
-                if (r, c) == self.start_state or (r, c) == self.goal_state:
+            if world_attempts > 1000:
+                raise RuntimeError(
+                    "Couldn't generate a valid world with "
+                    f"min_solution_steps={self.min_solution_steps}"
+                )
+
+            # New start / goal pair.
+            self.initGrid()
+            self.state = self.start_state
+
+            obstacle_attempts = 0
+
+            while True:
+                obstacle_attempts += 1
+
+                if obstacle_attempts > 1000:
+                    # This start/goal pair has been sufficiently tortured.
+                    # Abandon it and generate a new pair.
+                    break
+
+                # Clear world but preserve the current start / goal pair.
+                self.grid = np.zeros(
+                    (self.grid_size, self.grid_size)
+                )
+
+                self.grid[self.goal_state] = GOAL
+
+                # Generate unique obstacle positions.
+                obs_set = set()
+
+                while len(obs_set) < self.countobstacles:
+                    r = self.rng.integers(
+                        0,
+                        self.grid_size,
+                    )
+                    c = self.rng.integers(
+                        0,
+                        self.grid_size,
+                    )
+
+                    position = (r, c)
+
+                    if (
+                        position == self.start_state
+                        or position == self.goal_state
+                    ):
+                        continue
+
+                    obs_set.add(position)
+
+                self.obstacles = np.array(
+                    list(obs_set)
+                )
+
+                for obs in self.obstacles:
+                    self.grid[
+                        obs[0],
+                        obs[1],
+                    ] = OBSTACLE
+
+                # One BFS now gives us BOTH:
+                # 1. solvability
+                # 2. optimal path length
+                distances = _bfs_distance_from_goal(self)
+
+                solution_steps = int(
+                    distances[self.start_state]
+                )
+
+                # Unreachable:
+                # keep the SAME start / goal pair
+                # and simply reroll obstacles.
+                if solution_steps == INF:
                     continue
-                obs_set.add((r, c))
 
-            self.obstacles = np.array(list(obs_set))
-            for obs in self.obstacles:
-                self.grid[obs[0], obs[1]] = -1  # Obstacle placed
+                # Solvable but too trivial:
+                # abandon this start / goal pair entirely.
+                if solution_steps < self.min_solution_steps:
+                    break
 
-            if isSolvable(self):
-                break
-            if attempts > 1000:
-                raise RuntimeError("Couldn't generate a solvable grid")
+                # Accepted world.
+                self.solution_steps = solution_steps
+                self.state = self.start_state
+                self.currentsteps = 0
+                self.reward = 0
 
-        attempts = 0  # reset attempts for next time
-        return self.state
+                return self.state
 
     def is_legal(self, action: int):
         tr, tc = self.state

@@ -26,7 +26,6 @@ class ReplayBuffer:
             self.buffer[self.current_capacity]=transition
             self.current_capacity+=1
         else:
-            print("RB capacity full removing oldest element before appending")
             self.buffer[self.oldest]=transition
             self.oldest+=1
             if self.oldest == self.capacity :
