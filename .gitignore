@@ -37,7 +37,7 @@ events.out.tfevents.*
 # Temporary evaluation output
 results/p3_eval/fc*_ds*_es*.json
 
-
+artifacts/p5_dqn/
 
 # Keep the directory in Git
 !data/raw/.gitkeep
