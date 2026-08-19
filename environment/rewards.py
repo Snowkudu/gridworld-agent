@@ -1,4 +1,3 @@
-
 def sparse_reward(
     previous_position,
     current_position,
@@ -31,6 +30,7 @@ def neutral_step_reward(
         return -5.0
 
     return 0.0
+
 
 def mild_step_reward(
     previous_position,
@@ -76,6 +76,7 @@ def manhattan_shaped_reward(
         return -0.5
 
     return -1.5
+
 
 def time_distance_reward(
     previous_position,
@@ -124,6 +125,7 @@ def time_cost_reward(
     # ordinary legal movement
     return step_cost
 
+
 def make_potential_manhattan_reward(
     gamma: float,
     zero_terminal: bool,
@@ -143,16 +145,12 @@ def make_potential_manhattan_reward(
         else:
             base_reward = 0.0
 
-        previous_phi = (
-            -manhattan_distance(previous_position, goal) / 18.0
-        )
+        previous_phi = -manhattan_distance(previous_position, goal) / 18.0
 
         if zero_terminal and event in ("goal", "timeout"):
             current_phi = 0.0
         else:
-            current_phi = (
-                -manhattan_distance(current_position, goal) / 18.0
-            )
+            current_phi = -manhattan_distance(current_position, goal) / 18.0
 
         shaping = gamma * current_phi - previous_phi
 
@@ -178,9 +176,7 @@ def get_reward_fn(
 ):
     if name == "potential_manhattan_zero_terminal":
         if gamma is None:
-            raise ValueError(
-                "potential_manhattan requires gamma"
-            )
+            raise ValueError("potential_manhattan requires gamma")
 
         return make_potential_manhattan_reward(
             gamma=gamma,
@@ -189,9 +185,7 @@ def get_reward_fn(
 
     if name == "potential_manhattan_position_terminal":
         if gamma is None:
-            raise ValueError(
-                "potential_manhattan requires gamma"
-            )
+            raise ValueError("potential_manhattan requires gamma")
 
         return make_potential_manhattan_reward(
             gamma=gamma,
@@ -201,6 +195,4 @@ def get_reward_fn(
     try:
         return REWARD_FUNCTIONS[name]
     except KeyError:
-        raise ValueError(
-            f"Unknown reward function: {name}"
-        )
+        raise ValueError(f"Unknown reward function: {name}")

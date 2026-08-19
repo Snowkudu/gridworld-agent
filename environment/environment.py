@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Callable
 
 from environment.gridworld import GridWorld
 from environment.rewards import manhattan_shaped_reward

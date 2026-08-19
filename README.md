@@ -1,375 +1,175 @@
 # GridWorld ML/RL Agent
 
-A staged machine-learning project that starts with supervised imitation of a BFS expert policy, evaluates the resulting policies in closed loop, then moves from an MLP to a CNN before reinforcement learning.
+GridWorld is a staged machine-learning project that follows the same navigation problem from supervised imitation into closed-loop control and reinforcement learning.
 
-The project is intentionally phase-driven: each phase freezes a contract, measures the resulting behavior, and uses the observed limitation to motivate the next phase rather than silently repairing it.
+What began as an MLP → CNN → DQN progression increasingly became an evaluation project. Offline accuracy proved insufficient once a learned policy generated its own future states, deterministic policies exposed compounding errors and attractors, and reinforcement learning showed how reward design, exploration, bootstrapping, optimization, and deployment behavior can interact without producing a genuinely general navigation policy.
 
-## Current status
-
-- **P1 complete:** environment, reward contract, oracle policy, dataset generation, validation, and contract tests.
-- **P2 complete:** supervised MLP baseline and experiment sweep.
-- **P3 complete:** closed-loop MLP evaluation, rescue diagnostics, headless metrics, and minimal Pygame viewer.
-- **P4 complete:** 3-channel CNN representation, architecture/head/optimization/weight-decay experiments, multi-seed finalist gauntlet, champion rollout evaluation, TensorBoard reporting, and ONNX export.
-- **Next:** P5 DQN reinforcement learning.
+The final DQN-family policy is a **competent small-world controller rather than a general navigator**. That limitation is preserved rather than hidden behind stronger tooling such as action masking, memory, or explicit planning.
 
 ---
 
-## P1 — Environment and dataset contract
+## Project story
 
-### World
-
-- Grid size: `10 × 10`
-- Obstacles: `30` cells
-- State values:
-  - `-1`: obstacle
-  - `0`: empty
-  - `1`: agent
-  - `2`: goal
-- Actions:
-  - `0`: up
-  - `1`: down
-  - `2`: left
-  - `3`: right
-- Illegal moves and obstacle collisions leave the agent in place.
-- Episodes terminate when the goal is reached or `max_steps` is exhausted.
-- Generated maps must be solvable according to BFS.
-
-### Reward contract
-
-| Event | Reward |
-|---|---:|
-| Goal | `+10.0` |
-| Timeout | `-5.0` |
-| Boundary or obstacle hit | `-2.0` |
-| Legal move closer to goal | `-0.5` |
-| Legal move farther or equal | `-1.5` |
-
-Goal completion takes precedence when the goal is reached on the final permitted step.
-
-### Canonical dataset
-
-- Dataset version: `gridworld_dataset_v1`
-- Environment version: `gridworld_env_v1`
-- Reward version: `manhattan_shaped_v1`
-- Episodes: `2000`
-- Maximum steps: `200`
-- Seed: `123`
-- Samples: `16679`
-- Solved episodes: `2000`
-
-Generated datasets are excluded from Git and can be reproduced from source.
+| Phase | Question | Outcome |
+|---|---|---|
+| **P1** | Can the environment and dataset contract be made reproducible? | Frozen GridWorld contract, BFS oracle, dataset generation, and verification tests |
+| **P2** | Can an MLP imitate the BFS expert? | Useful offline classifier, but limited policy quality |
+| **P3** | Does offline classification accuracy survive closed-loop control? | Mostly no; repeated mistakes compound into softlocks and timeouts |
+| **P4** | Does spatial representation improve the policy? | A 3-channel CNN substantially improves autonomous control and exposes deterministic deadlocks more clearly |
+| **P5** | Can a relatively blind DQN learn robust navigation from interaction? | Strong bounded-grid competence, but a brittle long-horizon Q-policy and poor scaling to harder worlds |
+| **P6** | Can the whole project be understood quickly without reading the experiment history? | Interactive UX / demo phase |
 
 ---
 
-## P2 — Supervised MLP baseline
+## Environment
 
-P2 trains an MLP to imitate the BFS expert policy from labelled GridWorld states.
+The canonical environment is a deterministic `10 × 10` GridWorld.
 
-### Method
+- `30%` obstacle density
+- random agent start and goal
+- BFS-solvable maps only
+- actions: up, down, left, right
+- illegal actions leave the agent in place
+- a BFS oracle provides shortest-path labels and evaluation references
+- model input can be converted to a 3-channel representation:
+  - obstacles
+  - agent
+  - goal
 
-- deterministic `80/10/10` train/validation/test split
-- two-hidden-layer MLP with ReLU activations
-- cross-entropy classification loss
-- Adam optimizer
-- validation-loss checkpoint selection
-- early stopping
-- fixed split and experiment seeds
-- checkpoint reconstruction from saved configuration
-
-### Selected MLP
-
-| Parameter | Value |
-|---|---:|
-| Hidden layers | `256, 128` |
-| Batch size | `16` |
-| Learning rate | `3e-4` |
-| Dropout | `0.10` |
-| Weight decay | `0.0` |
-
-| Metric | Result |
-|---|---:|
-| Best epoch | `8` |
-| Validation loss | `1.1248` |
-| Validation accuracy | `47.03%` |
-| Test loss | `1.1486` |
-| Test accuracy | `45.12%` |
-| Majority-class baseline | `26.12%` |
-
-The MLP learns useful state-to-action structure, but classification accuracy alone does not answer whether the learned policy can navigate full episodes. P3 therefore evaluates the frozen model in closed loop.
+The environment is intentionally simple enough that the original expectation was that a neural network should eventually learn a broadly competent navigation policy without stronger policy-side structure.
 
 ---
 
-## P3 — Closed-loop MLP evaluation
+## P2–P4: supervised policies
 
-P3 places frozen P2 checkpoints back inside the environment.
+P2 trained an MLP to imitate the BFS oracle. It achieved useful offline classification performance, but P3 (closed-loop evaluation) showed that offline accuracy was a weak proxy for autonomous control: once the model's own mistakes determined its next inputs, repeated deterministic errors quickly compounded.
 
-The assisted evaluator compares the model action with the BFS oracle. When they agree, the model action is executed. When they disagree, the raw action is rejected and a random legal alternative is selected. The oracle acts only as a disagreement gate; it does not directly choose the rescue action.
-
-This intentionally simple rescue mechanism prevents some deterministic softlocks without adding planning, memory, heuristics, or retraining.
-
-### P3 closed-loop comparison
-
-| Rollout metric | **MLP 256×128**<br>`bs16 · lr3e-4 · dropout 0.10` | **MLP 64×64**<br>`bs32 · lr3e-4 · dropout 0.10` |
-|---|---:|---:|
-| Episodes | 50 | 50 |
-| Assisted success | **80%** | 76% |
-| Fully autonomous success | **4%** | 2% |
-| Timeout | 20% | 24% |
-| Oracle agreement | **23.0%** | 21.0% |
-| Random rescue rate | 77.0% | 79.0% |
-| Avg. successful steps | **22.1** | 23.4 |
-
-The main result is not the assisted success rate. The selected MLP solves only `2/50` episodes without rescue. Its own decisions push it into narrow state regions where deterministic errors repeat and compound.
-
-### P3 conclusion
-
-The supervised MLP is above baseline offline, but weak as an autonomous policy. P4 tests whether a spatial representation and convolutional inductive bias improve both classification and closed-loop behavior.
-
----
-
-## P4 — Spatial CNN policy
-
-### 3-channel representation
-
-Instead of flattening the raw grid directly, P4 represents each state as three binary spatial channels:
-
-```text
-channel 0: obstacles
-channel 1: agent
-channel 2: goal
-```
-
-The conversion is:
-
-```text
-[N, 100] → [N, 3, 10, 10]
-```
-
-This was the strongest representation tested in P4 and produced the first large jump over the MLP baseline.
-
-### Experiment progression
-
-P4 separated the search into explicit stages:
-
-```text
-representation
-→ architecture
-→ head
-→ optimization
-→ finalist weight decay
-→ multi-seed gauntlet
-```
-
-The figures below are regenerated from TensorBoard event files through `utils.export_tensorboard`; they are not screenshots of the TensorBoard UI.
-
-### Representation baseline
-
-The first CNN comparison tested the original single-channel grid against the 3-channel obstacle/agent/goal representation. The separation in validation loss justified freezing the 3-channel representation before architecture search.
+P4 replaced the flattened representation with a spatial CNN using separate obstacle, agent, and goal channels. This produced the first large improvement in autonomous behavior.
 
 ![1-channel vs 3-channel validation loss](artifacts/p4_cnn/story/baseline_validation_loss.png)
 
-### Architecture search
+A multi-seed finalist gauntlet was used to select the P4 CNN rather than relying on a single lucky run. The selected CNN reached approximately **70% autonomous success** on its canonical 100-world closed-loop evaluation, while its failures remained dominated by repeated-state deadlocks and short oscillations. For reference, adding a direct rescue policy could push the same evaluation to 100% success, but that did not make the underlying autonomous policy itself stronger.
 
-The architecture sweep tested convolution widths, pooling choices, and kernel/padding behavior. Wider feature extractors clearly improved over the early `16 → 32` baseline, with the later experiments converging on a `64 → 64` backbone, `3 × 3` kernels, padding `2`, and one pooling stage.
+The key P4 lesson was already visible:
 
-![CNN architecture validation loss](artifacts/p4_cnn/story/architecture_validation_loss.png)
-
-### Classifier-head search
-
-With the spatial backbone frozen, P4 compared fully connected width and dropout. These runs clustered much more tightly than the representation and architecture experiments, showing that the largest P4 gain came from spatial encoding and convolutional feature extraction rather than simply increasing classifier capacity.
-
-![Classifier-head validation loss](artifacts/p4_cnn/story/head_validation_loss.png)
-
-### Optimization search
-
-Learning rate and batch size were then varied while keeping the selected representation and architecture fixed.
-
-![Learning-rate and batch-size validation loss](artifacts/p4_cnn/story/optimization_validation_loss.png)
-
-### Weight decay
-
-A lightweight weight-decay sweep was used to inspect regularization behavior:
-
-![Weight-decay validation loss](artifacts/p4_cnn/story/weight_decay_validation_loss.png)
-
-The historical finalist weight-decay stage then crossed the four finalist recipes with six weight-decay values:
-
-```text
-4 finalists × 6 weight decays = 24 runs
-```
-
-![Finalist weight-decay validation loss](artifacts/p4_cnn/story/weight_decay_finalists_validation_loss.png)
+> A model can contain useful spatial information and still fail as a robust closed-loop navigation policy.
 
 ---
 
-## P4 finalist gauntlet
+## P5: reinforcement learning
 
-Four finalist recipes were evaluated across:
+### Original intention
 
-```text
-10 dataset seeds
-× 10 experiment seeds
-× 4 finalists
-= 400 training runs
-```
+P5 began with a simple expectation:
 
-The selection criterion was frozen before comparison:
+> Given a small, fully observed GridWorld, a DQN should eventually figure out navigation.
 
-> **Lowest mean validation loss across all 100 dataset/experiment seed combinations for each recipe.**
+The agent was deliberately kept relatively blind. The Q-policy itself had to learn legality, recovery, and navigation preferences from interaction.
 
-The raw 400-run validation-loss view is intentionally dense; it is included as evidence of the experiment scale and cross-seed instability. Final selection is based on the aggregate statistics below, not visual inspection of individual curves.
+### What actually happened
 
-![400-run finalist gauntlet validation loss](artifacts/p4_cnn/story/gauntlet_validation_loss.png)
+The first useful DQN policies did not fail primarily because they lacked all spatial competence. They repeatedly collapsed into deterministic attractors, especially short reversals and two-state oscillations.
 
-### Finalist aggregate results
+The implementation itself also evolved during the phase. The original DQN target logic was changed to **DDQN-style target selection** in an attempt to improve Q-value stability and reduce overestimation. From that point onward, the later P5 experiments were effectively DDQN-family experiments even though the phase remained framed as the DQN stage of the project.
 
-| Rank | Recipe | Mean val loss | Std | Catastrophes ≥ 1.0 |
-|---:|---|---:|---:|---:|
-| **1** | `fc64_do0_lr2e3_bs16_wd1e5` | **0.286665** | **0.020325** | **0** |
-| 2 | `fc128_do25_lr5e4_bs32_wd1e3` | 0.306044 | 0.249567 | 5 |
-| 3 | `fc128_do0_lr2e3_bs32_wd1e4` | 0.318260 | 0.190076 | 3 |
-| 4 | `fc64_do0_lr1e3_bs16_wd3e4` | 0.337958 | 0.289437 | 7 |
+Much of the experimentation then became an attempt to improve the conditions under which Q-learning operated:
 
-The ranking follows the frozen mean-validation-loss criterion. The key result is the champion's stability: it produced **zero catastrophic runs** across all 100 seed combinations.
+- DDQN over DQN for Q-value stability
+- reward shaping
+- epsilon scheduling
+- Boltzmann / ResMax exploration
+- replay and batch changes
+- target-network synchronization
+- optimizer regularization
+- CNN capacity
+- an inertia prior that discouraged immediate reversals
 
-A useful contrast emerged against the dropout finalist: that model often converged to very strong individual solutions, but rare catastrophic optimization failures damaged its aggregate robustness. The selected champion sacrifices some best-case performance for substantially stronger cross-seed reliability.
+Suppressing attractors improved deployment behavior, but it also exposed a second failure mode: illegal actions and repeated collisions became more visible once immediate reversals were strongly discouraged.
 
-### P4 champion
+The final system became much more competent, but the harder world tiers showed that the underlying Q-policy remained **brittle and short-sighted**.
 
-```text
-input channels   3
-conv channels    64 → 64
-kernel           3 × 3
-padding          2
-pooling stages   1
-flattened size   4096
-classifier       4096 → 64 → 4
-activation       ReLU
-dropout          0.0
-learning rate    2e-3
-batch size       16
-weight decay     1e-5
-```
+### Final world-tier comparison
 
-Stable deployed checkpoint:
+The final benchmark evaluates increasingly difficult world sets using fixed 500-world tiers. Each tier enforces a minimum BFS solution length.
+
+| Model | W0 | W5 | W10 | W15 |
+|---|---:|---:|---:|---:|
+| **Historical scratch DDQN champion** | **88.4%** | **84.4%** | 72.0% | 42.0% |
+| **Frozen P4 CNN + DDQN head** | 87.2% | 83.6% | **72.8%** | **44.2%** |
+
+The historical scratch champion remains the best observed original P5 checkpoint. Its checkpoint-selection process was later found to be contaminated by validation seeds overlapping the training/replay path, so it is retained as a **historical best result rather than a fully reproducible reference run**.
+
+The historical `.pt` checkpoint is intentionally **not committed or distributed**. PyTorch checkpoint files can rely on pickle-backed deserialization, and large binary checkpoints are also poor normal Git history artifacts.
+
+### Frozen transfer result
+
+The strongest late P5 ablation transferred the P4 supervised CNN into the RL agent, froze:
 
 ```text
-artifacts/p4_cnn/champion/checkpoint.pt
+both convolutional layers
+fully connected layer 1
 ```
 
-The canonical deployed copy was selected from dataset seed `123`; experiment seed `123` achieved best validation loss `0.281193` at epoch `8`.
+and trained only a fresh Q-head.
+
+With a much slower target synchronization interval, the frozen representation reached essentially the same world-tier ceiling as the fully trainable scratch agent.
+
+This was one of the most important P5 results.
+
+It showed that the CNN representation itself was **not the dominant final bottleneck**. A supervised spatial representation already contained enough useful information to support near-champion RL performance.
+
+The Q-value traces below show the frozen-transfer head learning on top of that fixed representation. Predicted values and Bellman targets remain numerically stable while the overall value scale rises and eventually plateaus.
+
+![Frozen-transfer Q values](artifacts/p5_dqn/story/frozen_transfer_q_values.png)
+
+The target-network parameter gap shows the deliberately slower synchronization schedule directly. The online head is allowed to move away from the target between sync events, while the frozen backbone removes most representation-drift ambiguity from that comparison.
+
+![Frozen-transfer target parameter gap](artifacts/p5_dqn/story/frozen_transfer_parameter_gap.png)
+
+The remaining weakness was much closer to the learned Q-policy:
+
+- action values were often weakly differentiated
+- small ranking errors could produce deterministic bad actions
+- one-step bootstrapping did not produce reliably strong long-horizon navigation preferences
+- suppressing one failure mode could simply move failure probability somewhere else
+- performance degraded sharply as required path length increased
+
+### P5 conclusion
+
+P5 did not produce the general navigation policy originally imagined.
+
+It produced a competent controller for small, familiar worlds, but the policy remained brittle as path length and world hostility increased. The refusal to add stronger policy-side structure — action masking, memory/context, explicit planning, or more aggressive credit-propagation machinery — left the agent in a limited regime where local competence did not mature into general navigation.
+
+That limitation is part of the result.
 
 ---
 
-## Champion closed-loop evaluation
+## Key findings
 
-The champion was evaluated on the same 100 generated worlds in both assisted and autonomous modes using seed `999`.
-
-| Metric | Assisted | Autonomous |
-|---|---:|---:|
-| Episodes | 100 | 100 |
-| Success | **100%** | **70%** |
-| Timeout | 0% | **30%** |
-| Mean steps | 9.58 | 64.49* |
-| Median steps | 7 | 8 |
-| Mean oracle agreement | **87.71%** | 77.94% |
-| Total random rescues | 207 | 0 |
-| Zero-rescue / autonomous successes | 56 | 70 |
-| Mean repeated states | 0.33 | 0.54 |
-| Mean max-state visits | 1.66 | **36.32** |
-
-`*` Autonomous mean steps includes the 30 failed episodes that each run to the 200-step timeout. Among the **70 successful autonomous episodes**, mean path length is approximately **6.41 steps** with median **5**.
-
-### Failure mode
-
-All 30 autonomous failures show repeated-state behavior:
-
-- `24/30` failures contain two repeatedly visited states, consistent with short oscillations.
-- `6/30` failures contain one repeatedly visited state, consistent with stationary deadlock.
-- Failed episodes have very high maximum state-visit counts.
-
-This is the important P4 boundary. When the CNN stays on a productive trajectory, navigation is usually short and clean. When a deterministic behavioral-cloning policy revisits a failure state, it tends to reproduce the same action and has no intrinsic recovery mechanism.
-
-That limitation is preserved rather than patched in P4.
+- **Offline accuracy is not closed-loop competence.** Small deterministic errors can compound once a model controls its own future state distribution.
+- **Spatial representation matters.** The 3-channel CNN was a major improvement over the MLP baseline.
+- **Stable optimization does not imply a good policy.** TD loss, mean Q-values, and target statistics could look healthy while action rankings remained brittle.
+- **Attractor suppression is not the same as learned navigation.** Inertia was effective at stopping reversals, but it was an external action prior rather than evidence that the Q-function understood why reversing was bad.
+- **Representation was less limiting than expected.** A frozen supervised CNN could support almost the same final RL performance as end-to-end training.
+- **Long-horizon navigation remained the ceiling.** Success fell substantially as the minimum required solution length increased even when illegality and short cycles were relatively controlled.
+- **Evaluation quality changed the conclusions.** Larger fixed world tiers and stricter validation exposed several earlier assumptions that smaller or more permissive evaluations had hidden.
 
 ---
 
-## ONNX deployment artifact
-
-The frozen champion can be exported from PyTorch to ONNX and inspected independently of the Python model definition.
-
-The exported graph makes the final inference contract explicit:
+## Repository structure
 
 ```text
-[1, 3, 10, 10]
-→ Conv 3→64
-→ ReLU
-→ MaxPool
-→ Conv 64→64
-→ ReLU
-→ Reshape 4096
-→ FC 4096→64
-→ ReLU
-→ FC 64→4
-→ logits
+agents/          DQN/DDQN agent and replay buffer
+configs/         experiment and story-mode configurations
+data/            dataset loading and representations
+environment/     GridWorld, rewards, evaluation, and viewer code
+models/          MLP/CNN architectures and checkpoint helpers
+policies/        action/oracle policy helpers
+training/        supervised and RL training utilities
+scripts/         dataset and verification utilities
+tests/           contract and regression tests
+artifacts/       generated experiment outputs (mostly ignored)
 ```
-
-![P4 champion ONNX graph](artifacts/p4_cnn/story/champion_onnx_graph.png)
-
-The horizontal graph above was exported from the champion ONNX model and inspected with Netron.
-
----
-
-## Why P5 is reinforcement learning
-
-P4 substantially improves spatial generalization and closed-loop success, but the remaining failures expose a limitation of behavioral cloning rather than representation alone.
-
-The supervised policy learns:
-
-```text
-state → expert action
-```
-
-but does not learn the long-term consequences of selecting an action and transitioning into another state.
-
-P5 therefore moves to DQN so action values are learned from transition and reward consequences:
-
-```text
-(state, action, reward, next_state)
-→ Q-values
-```
-
-The P4 deadlocks and oscillations become the behavioral baseline against which the RL policy will be evaluated.
-
----
-
-## Reproducibility and reporting
-
-P4 separates raw generated experiment artifacts from curated evidence.
-
-Typical artifact structure:
-
-```text
-artifacts/p4_cnn/
-├── <config-set>/
-│   ├── models/<run>/checkpoint.pt
-│   ├── tensorboard/<run>/events...
-│   └── tensorboard_exports/
-├── champion/
-│   └── checkpoint.pt
-├── reports/
-└── story/
-    ├── baseline_validation_loss.png
-    ├── architecture_validation_loss.png
-    ├── head_validation_loss.png
-    ├── optimization_validation_loss.png
-    ├── weight_decay_validation_loss.png
-    ├── weight_decay_finalists_validation_loss.png
-    ├── gauntlet_validation_loss.png
-    └── champion_onnx_graph.png
-```
-
-The experiment figures committed under `story/` are generated from TensorBoard event files through `utils.export_tensorboard`. Raw event files, full exports, gauntlet checkpoints, and other large experiment artifacts remain local/ignored; only the compact evidence used by this README is intended for Git.
 
 ---
 
@@ -387,59 +187,68 @@ Validate it:
 python -m scripts.verify data/raw/gridworld_2000ep_200ms_123seed.npz
 ```
 
-Run P4 experiment stages:
+Run the curated P5 story-mode training configs:
 
 ```powershell
-python -m training.train_cnn --config-set baseline
-python -m training.train_cnn --config-set architecture
-python -m training.train_cnn --config-set head
-python -m training.train_cnn --config-set optimization
-python -m training.train_cnn --config-set weight_decay
+python -m environment.evaluate_dqn train
 ```
 
-Historical finalist weight-decay sweep:
+Evaluate a P5 checkpoint across the world tiers:
 
 ```powershell
-python -m training.train_cnn --config-set weight_decay_finalists
+python -m environment.evaluate_dqn tiers --checkpoint "path\to\checkpoint.pt"
 ```
 
-Run champion assisted evaluation:
+Run tests:
 
 ```powershell
-python -m environment.evaluate --mode headless --checkpoint artifacts/p4_cnn/champion/checkpoint.pt --episodes 100 --seed 999
+python -m pytest -q
 ```
 
-Run champion autonomous evaluation:
+Run Ruff:
 
 ```powershell
-python -m environment.evaluate --mode autonomous --checkpoint artifacts/p4_cnn/champion/checkpoint.pt --episodes 100 --seed 999
-```
-
-Run TensorBoard for a config set:
-
-```powershell
-tensorboard --logdir artifacts/p4_cnn/architecture/tensorboard --port 6008
-```
-
-Run tests and formatting checks:
-
-```powershell
-python -m pytest
-python -m ruff check .
-python -m ruff format --check .
+ruff check .
 ```
 
 ---
 
-## Roadmap
+## Testing and reproducibility
 
-- [x] **P1:** environment and dataset contract
-- [x] **P2:** supervised MLP baseline
-- [x] **P3:** closed-loop evaluation and minimal Pygame viewer
-- [x] **P4:** CNN representation, multi-seed selection, rollout evaluation, ONNX export
-- [ ] **P5:** DQN reinforcement learning
-- [ ] **P6:** supervised-to-RL transfer experiments
-- [ ] **P7:** polished Pygame application and experiment dashboard
-- [ ] **P8:** scaling and robustness
+The repository includes regression tests for:
 
-P4 closes with a policy that is dramatically stronger than the P2/P3 MLP but still exhibits deterministic deadlocks and short oscillations under autonomous rollout. Those failures are the starting benchmark for P5.
+- GridWorld contracts
+- dataset splits and representations
+- MLP/CNN behavior
+- replay buffer behavior
+- DQN/DDQN action selection and optimization
+- target synchronization
+- epsilon updates
+- logging and metrics
+- supervised-to-RL transfer
+- frozen transfer behavior
+
+Raw experiment outputs, large TensorBoard directories, generated datasets, and model checkpoints are not intended to live in normal Git history.
+
+The curated story-mode configurations are the reproducible reference for the final repository. Historical best checkpoints are documented separately when their exact training trajectory cannot be reproduced cleanly.
+
+---
+
+## Limitations
+
+This project should not be read as evidence of general-purpose neural navigation.
+
+The canonical models are strongly tied to a small fixed GridWorld contract. The RL agent does not use action masking, explicit planning, memory, or a scale-independent navigation architecture. Its final performance is strongest on small worlds and degrades substantially with longer required trajectories.
+
+The project intentionally stops at that boundary rather than continuing to add stronger algorithms until the benchmark is artificially conquered.
+
+---
+
+## Status
+
+- [x] **P1** — environment and dataset contract
+- [x] **P2** — supervised MLP baseline
+- [x] **P3** — closed-loop evaluation
+- [x] **P4** — spatial CNN policy
+- [x] **P5** — DQN/DDQN, robustness evaluation, and transfer analysis
+- [ ] **P6** — interactive UX / demo

@@ -1,14 +1,19 @@
 import numpy as np
 import torch
 
-from environment.pathfinding import _bfs_distance_from_goal, isSolvable,INF
+from environment.pathfinding import INF, _bfs_distance_from_goal
 from policies.actions import AGENT, GOAL, OBSTACLE, actions
 
 
 class GridWorld:
     def __init__(
-        self, grid_size, obstaclesPercent, rewards_fn, maxsteps, seed: int | None = None,
-        min_solution_steps:int=0,
+        self,
+        grid_size,
+        obstaclesPercent,
+        rewards_fn,
+        maxsteps,
+        seed: int | None = None,
+        min_solution_steps: int = 0,
     ):  # Constructor with randoms start and finish.
         self.reward = 0.0
         self.grid_size = grid_size
@@ -20,7 +25,7 @@ class GridWorld:
         self.reward_fn = rewards_fn
         self.seed = seed
         self.rng = np.random.default_rng(self.seed)
-        self.min_solution_steps=min_solution_steps
+        self.min_solution_steps = min_solution_steps
         self.solution_steps: int | None = None
 
     def initGrid(self):  # Init an empty grid with start and finish.
@@ -86,9 +91,7 @@ class GridWorld:
                     break
 
                 # Clear world but preserve the current start / goal pair.
-                self.grid = np.zeros(
-                    (self.grid_size, self.grid_size)
-                )
+                self.grid = np.zeros((self.grid_size, self.grid_size))
 
                 self.grid[self.goal_state] = GOAL
 
@@ -107,17 +110,12 @@ class GridWorld:
 
                     position = (r, c)
 
-                    if (
-                        position == self.start_state
-                        or position == self.goal_state
-                    ):
+                    if position == self.start_state or position == self.goal_state:
                         continue
 
                     obs_set.add(position)
 
-                self.obstacles = np.array(
-                    list(obs_set)
-                )
+                self.obstacles = np.array(list(obs_set))
 
                 for obs in self.obstacles:
                     self.grid[
@@ -130,9 +128,7 @@ class GridWorld:
                 # 2. optimal path length
                 distances = _bfs_distance_from_goal(self)
 
-                solution_steps = int(
-                    distances[self.start_state]
-                )
+                solution_steps = int(distances[self.start_state])
 
                 # Unreachable:
                 # keep the SAME start / goal pair

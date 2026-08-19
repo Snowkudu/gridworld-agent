@@ -260,6 +260,29 @@ FINALIST_WEIGHT_DECAY: list[ExperimentConfig] = [
 
 assert len(FINALIST_WEIGHT_DECAY) == 24
 
+TRANSFER: list[ExperimentConfig] = [
+    {
+        "name": "cnn_transfer_128_128_baseline",
+        "input_ch": 3,
+        "conv_channels": [128, 128],
+        "kernel_size": 3,
+        "padding": 2,
+        "pooling": 1,
+        "fc_hidden": 128,
+        "dropout": 0.0,
+        # Match baseline training values
+        "learning_rate": 1e-3,
+        "batch_size": 128,
+        "weight_decay": 0.0,
+        "max_epochs": 200,
+        "patience": 10,
+        "min_delta": 0.0,
+        "dataset_seed": 123,
+        "split_seed": 123,
+        "experiment_seed": 123,
+    }
+]
+
 
 CONFIG_SETS = {
     "baseline": BASELINE,
@@ -269,7 +292,9 @@ CONFIG_SETS = {
     "weight_decay": WEIGHT_DECAY,
     "weight_decay_finalists": FINALIST_WEIGHT_DECAY,
     "finals": FINAL_CONFIGS,
+    "transfer": TRANSFER,
 }
+
 
 CONFIG_BASES: dict[str, ExperimentConfig] = {
     "baseline": {},

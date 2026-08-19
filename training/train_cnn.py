@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
             "head",
             "optimization",
             "weight_decay_finalists",
+            "transfer",
         ),
         default="baseline",
     )

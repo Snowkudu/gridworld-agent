@@ -46,3 +46,5 @@ artifacts/p5_dqn/
 .DS_Store
 Thumbs.db
 # Created by venv; see https://docs.python.org/3/library/venv.html
+.coverage
+htmlcov/

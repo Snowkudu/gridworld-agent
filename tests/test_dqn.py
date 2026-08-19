@@ -1,4 +1,3 @@
-
 import torch
 from torch import nn
 
@@ -16,7 +15,9 @@ DQN_CNN_DEFAULTS = {
 }
 
 
-def make_agent(epsilon_start: float = 1.0) -> DQNAgent:
+def make_agent(
+    epsilon_start: float = 1.0,
+) -> DQNAgent:
     return DQNAgent(
         config_online=DQN_CNN_DEFAULTS.copy(),
         config_target=DQN_CNN_DEFAULTS.copy(),
@@ -27,16 +28,19 @@ def make_agent(epsilon_start: float = 1.0) -> DQNAgent:
         epsilon_start=epsilon_start,
         epsilon_min=0.05,
         epsilon_decay=0.995,
+        weight_decay=0.0,
+        epsilon_update_interval=1,
         target_sync_interval=100,
+        device="cpu",
     )
 
 
 class DummyWorld:
     def __init__(self):
         self.grid = torch.zeros((10, 10), dtype=torch.float32)
-        self.grid[0, 0] = 1     # agent
-        self.grid[9, 9] = 2     # goal
-        self.grid[0, 1] = -1    # obstacle
+        self.grid[0, 0] = 1  # agent
+        self.grid[9, 9] = 2  # goal
+        self.grid[0, 1] = -1  # obstacle
 
     def get_state_tensor(self):
         return self.grid.clone()
@@ -47,9 +51,7 @@ class FixedQNetwork(nn.Module):
         super().__init__()
 
         # Parameter keeps this a real nn.Module with parameters.
-        self.q_values = nn.Parameter(
-            torch.tensor(values, dtype=torch.float32)
-        )
+        self.q_values = nn.Parameter(torch.tensor(values, dtype=torch.float32))
 
     def forward(self, x):
         return self.q_values.unsqueeze(0).expand(x.shape[0], -1)
@@ -68,20 +70,12 @@ def test_online_and_target_start_equal():
 def test_optimizer_only_contains_online_parameters():
     agent = make_agent()
 
-    online_ids = {
-        id(param)
-        for param in agent.online.parameters()
-    }
+    online_ids = {id(param) for param in agent.online.parameters()}
 
-    target_ids = {
-        id(param)
-        for param in agent.target.parameters()
-    }
+    target_ids = {id(param) for param in agent.target.parameters()}
 
     optimizer_ids = {
-        id(param)
-        for group in agent.optimizer.param_groups
-        for param in group["params"]
+        id(param) for group in agent.optimizer.param_groups for param in group["params"]
     }
 
     assert optimizer_ids == online_ids
@@ -103,19 +97,15 @@ def test_exploration_uses_full_action_space():
     agent.epsilon = 1.0
     world = DummyWorld()
 
-    actions = {
-        agent.select_action(world)
-        for _ in range(500)
-    }
+    actions = {agent.select_action(world) for _ in range(500)}
 
     assert actions == {0, 1, 2, 3}
+
 
 def test_epsilon_zero_uses_highest_q_value():
     agent = make_agent(epsilon_start=0.0)
 
-    agent.online = FixedQNetwork(
-        [1.0, -3.0, 8.0, 2.0]
-    )
+    agent.online = FixedQNetwork([1.0, -3.0, 8.0, 2.0])
 
     world = DummyWorld()
 
@@ -129,9 +119,7 @@ def test_greedy_selection_does_not_mask_actions():
 
     # Action 1 could correspond to a collision in a real world.
     # DQN is still allowed to choose it.
-    agent.online = FixedQNetwork(
-        [1.0, 100.0, 8.0, 2.0]
-    )
+    agent.online = FixedQNetwork([1.0, 100.0, 8.0, 2.0])
 
     world = DummyWorld()
 
@@ -158,6 +146,7 @@ def test_three_channel_cnn_accepts_world_state():
     action = agent.select_action(world)
 
     assert action in (0, 1, 2, 3)
+
 
 from agents.replay_buffer import Transition
 
@@ -203,7 +192,6 @@ def test_store_transition_keeps_state_snapshot():
     assert stored.next_state[0, 0].item() != 99
 
 
-
 def test_build_batch_has_expected_shapes():
     agent = make_agent()
 
@@ -224,15 +212,14 @@ def test_build_batch_has_expected_shapes():
         ),
     ]
 
-    states, actions, rewards, next_states, dones = agent._build_batch(
-        transitions
-    )
+    states, actions, rewards, next_states, dones = agent._build_batch(transitions)
 
     assert states.shape == (2, 3, 10, 10)
     assert actions.shape == (2,)
     assert rewards.shape == (2,)
     assert next_states.shape == (2, 3, 10, 10)
     assert dones.shape == (2,)
+
 
 def test_build_batch_preserves_transition_values():
     agent = make_agent()
@@ -260,6 +247,7 @@ def test_build_batch_preserves_transition_values():
     assert rewards.tolist() == [-2.5, 10.0]
     assert dones.tolist() == [False, True]
 
+
 def test_optimize_changes_online_but_not_target():
     agent = make_agent()
     agent.batch_size = 2
@@ -280,32 +268,36 @@ def test_optimize_changes_online_but_not_target():
         done=True,
     )
 
-    online_before = [
-        param.detach().clone()
-        for param in agent.online.parameters()
-    ]
+    online_before = [param.detach().clone() for param in agent.online.parameters()]
 
-    target_before = [
-        param.detach().clone()
-        for param in agent.target.parameters()
-    ]
+    target_before = [param.detach().clone() for param in agent.target.parameters()]
 
-    loss = agent.optimize_model()
+    result = agent.optimize_model()
+
+    assert result is not None
+
+    loss, metrics = result
 
     online_after = list(agent.online.parameters())
     target_after = list(agent.target.parameters())
 
-    assert loss is not None
     assert loss >= 0.0
+    assert metrics.optimization_step == 1
 
     assert any(
         not torch.equal(before, after)
-        for before, after in zip(online_before, online_after)
+        for before, after in zip(
+            online_before,
+            online_after,
+        )
     )
 
     assert all(
         torch.equal(before, after)
-        for before, after in zip(target_before, target_after)
+        for before, after in zip(
+            target_before,
+            target_after,
+        )
     )
 
 
@@ -321,10 +313,7 @@ def test_optimize_does_nothing_before_replay_warmup():
         done=False,
     )
 
-    online_before = [
-        param.detach().clone()
-        for param in agent.online.parameters()
-    ]
+    online_before = [param.detach().clone() for param in agent.online.parameters()]
 
     result = agent.optimize_model()
 
@@ -333,9 +322,9 @@ def test_optimize_does_nothing_before_replay_warmup():
     assert result is None
 
     assert all(
-        torch.equal(before, after)
-        for before, after in zip(online_before, online_after)
+        torch.equal(before, after) for before, after in zip(online_before, online_after)
     )
+
 
 def test_sync_target_copies_online_weights():
     agent = make_agent()

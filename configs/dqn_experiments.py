@@ -1,10 +1,8 @@
 from copy import deepcopy
-from itertools import product
+
 DQN_CONFIG = {
-    "name": "dqn_baseline",
-
+    "name": "dqn_champion",
     "seed": 123,
-
     "cnn": {
         "model_type": "cnn",
         "input_ch": 3,
@@ -15,36 +13,44 @@ DQN_CONFIG = {
         "fc_hidden": 128,
         "dropout": 0.0,
     },
-
     "dqn": {
         "replay_capacity": 100_000,
-        "batch_size": 64,
+        "batch_size": 128,
         "gamma": 0.90,
         "learning_rate": 1e-3,
-
+        "weight_decay": 1e-3,
         "epsilon_start": 1.0,
         "epsilon_min": 0.10,
-        "epsilon_decay": 0.99995,
+        "epsilon_decay": 0.9999,
         "epsilon_update_interval": 2,
-
         "target_sync_interval": 100,
     },
-
     "training": {
         "episodes": 2000,
         "max_steps": 100,
         "reward": "potential_manhattan_position_terminal",
-        "min_solution_steps": 10,
-
+        "min_solution_steps": 5,
         "novelty": {
             "enabled": False,
             "decay_power": 1.0,
         },
         "exploration": {
-    "mode": "random",
-}
+            "mode": "boltzmann",
+            "start_episode": 500,
+            "temperature": 0.50,
+        },
+        "epsilon_hardset": {
+            "episode": 1000,
+            "value": 0.40,
+        },
+        "inertia": {
+            "enabled": True,
+            "start_episode": 1000,
+            "strength": 0.75,
+        },
     },
 }
+
 
 def make_dqn_config(
     *,
@@ -74,77 +80,6 @@ def make_dqn_config(
 
     return config
 
-# A — replay/bootstrap warmup test
-SPARSE_WARMUP_1000 = make_dqn_config(
-    name="dqn_sparse_warmup1000",
-    reward="sparse",
-    dqn={
-        "gamma=0.9"
-        "learning_starts": 1000,
-    },
-)
-# B — wider CNN test
-SPARSE_CNN_64_64 = make_dqn_config(
-    name="dqn_sparse_cnn64x64",
-    reward="sparse",
-    cnn={
-        "conv_channels": (64, 64),
-        "fc_hidden": 128,
-        "dropout": 0.0,
-    },
-    dqn={
-        "gamma=0.95"
-        "learning_rate": 1e-3,
-        "weight_decay": 0.0,
-    },
-)
-
-DICTATOR_64_64 = make_dqn_config(
-    name="dqn_dictator_64x64",
-    reward="sparse",
-    cnn={
-        "conv_channels": (64, 64),
-        "fc_hidden": 128,
-        "dropout": 0.0,
-    },
-    dqn={
-        "gamma": 0.95,
-        "learning_rate": 1e-3,
-        "weight_decay": 0.0,
-        "epsilon_start": 1.0,
-        "epsilon_decay": 0.9995,
-    },
-    training={
-        "episodes": 100,
-        "max_steps": 100,
-    },
-)
-LAST_RUN = make_dqn_config(
-    name="dqn_last_run",
-    reward="sparse",
-
-    cnn={
-        "conv_channels": (64, 64),
-        "fc_hidden": 128,
-        "dropout": 0.0,
-    },
-
-    dqn={
-        "gamma": 0.95,
-        "learning_rate": 1e-3,
-        "weight_decay": 0.0,
-        "replay_capacity": 50_000,
-        "epsilon_start": 1.0,
-        "epsilon_min": 0.05,
-        "epsilon_decay": 0.9999,
-        "target_sync_interval": 60,
-    },
-
-    training={
-        "episodes": 100,
-        "max_steps": 200,
-    },
-)
 
 REWARD_LABELS = {
     "sparse": "sparse",
@@ -154,68 +89,157 @@ REWARD_LABELS = {
     "potential_manhattan_position_terminal": "pot_pos",
 }
 
-
-EPISODES = (1500,2000)
-MAX_STEPS = (75,100)
-
-
-LR_VALUES = (3e-4, 3e-3)
-
-SYNC_VALUES = (50, 200)
-
-NOVELTY_BETAS = (0.05, 0.10, 0.20)
-
-DECAY_POWERS = (0.75, 1.0)
-
-
 EXPERIMENTS = [
-
     make_dqn_config(
-        name="TEST",
+        name="small_power",
         dqn={
-            "gamma": 0.90,
-            "epsilon_start": 1.0,
-            "epsilon_min": 0.40,
-            "epsilon_decay": 0.99995,
-            "replay_capacity": 250_000,
+            "target_sync_interval": 50,
         },
         training={
-            "episodes": 4000,
+            "episodes": 500,
             "max_steps": 100,
             "min_solution_steps": 5,
-            "reward": "potential_manhattan_position_terminal",
+            "novelty": {
+                "enabled": False,
+                "decay_power": 1.0,
+            },
             "exploration": {
                 "mode": "boltzmann",
-                "start_episode": 550,
+                "start_episode": 100,
+                "temperature": 1,
+            },
+            # "epsilon_hardset": {
+            #     "episode": 1000,
+            #    "value": 0.40,
+            # },
+            "inertia": {
+                "enabled": True,
+                "start_episode": 100,
+                "strength": 1,
+            },
+            "transfer": {
+                "enabled": True,
+                "checkpoint": "artifacts/p4_cnn/cnn_transfer_128_128_baseline.pt",
+                "freeze": True,
+            },
+        },
+    )
+]
+
+P5_STORY_CONFIGS = [
+    make_dqn_config(
+        name="p5_story_scratch_champion",
+        reward="potential_manhattan_position_terminal",
+        seed=123,
+        cnn={
+            "model_type": "cnn",
+            "input_ch": 3,
+            "conv_channels": (128, 128),
+            "kernel_size": 3,
+            "padding": 2,
+            "pooling": 1,
+            "fc_hidden": 128,
+            "dropout": 0.0,
+        },
+        dqn={
+            "replay_capacity": 100_000,
+            "batch_size": 128,
+            "gamma": 0.90,
+            "learning_rate": 1e-3,
+            "weight_decay": 1e-3,
+            "epsilon_start": 1.0,
+            "epsilon_min": 0.10,
+            "epsilon_decay": 0.9999,
+            "epsilon_update_interval": 2,
+            "target_sync_interval": 100,
+        },
+        training={
+            "episodes": 2000,
+            "max_steps": 100,
+            "min_solution_steps": 5,
+            "novelty": {
+                "enabled": False,
+                "decay_power": 1.0,
+            },
+            "exploration": {
+                "mode": "boltzmann",
+                "start_episode": 250,
                 "temperature": 0.50,
+            },
+            "epsilon_hardset": {
+                "episode": 500,
+                "value": 0.40,
+            },
+            "inertia": {
+                "enabled": True,
+                "start_episode": 500,
+                "strength": 0.75,
+            },
+            "transfer": {
+                "enabled": False,
             },
         },
     ),
     make_dqn_config(
-        name="boltz_250k_rb",
+        name="p5_story_frozen_transfer",
+        reward="potential_manhattan_position_terminal",
+        seed=123,
+        cnn={
+            "model_type": "cnn",
+            "input_ch": 3,
+            "conv_channels": (128, 128),
+            "kernel_size": 3,
+            "padding": 2,
+            "pooling": 1,
+            "fc_hidden": 128,
+            "dropout": 0.0,
+        },
         dqn={
+            "replay_capacity": 100_000,
+            "batch_size": 128,
             "gamma": 0.90,
+            "learning_rate": 1e-3,
+            "weight_decay": 1e-3,
             "epsilon_start": 1.0,
-            "epsilon_min": 0.40,
-            "epsilon_decay": 0.99995,
-            "replay_capacity": 250_000,
+            "epsilon_min": 0.10,
+            "epsilon_decay": 0.9999,
+            "epsilon_update_interval": 2,
+            "target_sync_interval": 1000,
         },
         training={
-            "episodes": 4000,
+            "episodes": 2000,
             "max_steps": 100,
             "min_solution_steps": 5,
-            "reward": "potential_manhattan_position_terminal",
+            "novelty": {
+                "enabled": False,
+                "decay_power": 1.0,
+            },
             "exploration": {
                 "mode": "boltzmann",
-                "start_episode": 550,
+                "start_episode": 100,
                 "temperature": 0.50,
+            },
+            "epsilon_hardset": {
+                "episode": 1000,
+                "value": 0.40,
+            },
+            "inertia": {
+                "enabled": True,
+                "start_episode": 100,
+                "strength": 0.75,
+            },
+            "transfer": {
+                "enabled": True,
+                "checkpoint": ("artifacts/p4_cnn/cnn_transfer_128_128_baseline.pt"),
+                "freeze": True,
             },
         },
     ),
 ]
 
 EVAL_CONFIG = {
-    "seeds": list(range(10_000, 10_050)),
-    "max_steps": 200,
+    "seeds": list(range(10_000, 10_500)),
+    "max_steps": 100,
     "reward": "sparse",
+    "min_solution_steps": 5,
 }

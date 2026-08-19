@@ -59,7 +59,6 @@ def test_oldest_transition_is_removed_when_full():
     buffer.push(make_transition(1))
     buffer.push(make_transition(2))
     buffer.push(make_transition(3))
-  
 
     actions = [transition.action for transition in buffer.buffer]
 

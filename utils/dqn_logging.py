@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from dataclasses import asdict
 from pathlib import Path
 
@@ -13,8 +12,6 @@ from training.metrics import save_json
 from training.train_dqn_metrics import EpisodeMetrics, metric_as_dict
 
 
-
-
 class DQNLogger:
     def __init__(
         self,
@@ -22,17 +19,20 @@ class DQNLogger:
         run_config: dict,
     ):
 
-        self.run_dir=Path("artifacts/p5_dqn") / run_dir
-        self.run_dir.mkdir(parents=True,exist_ok=True)
-        self.config=run_config
-        self.tb_dir= self.run_dir / "tensorboard" / self.config["name"]
+        self.run_dir = Path("artifacts/p5_dqn") / run_dir
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.config = run_config
+        self.tb_dir = self.run_dir / "tensorboard" / self.config["name"]
         self.checkpoint_path = self.run_dir / "checkpoint.pt"
-        self.metric_path = self.run_dir/"metrics.json"
-        self.writer=SummaryWriter(log_dir=self.tb_dir)
-        self.episode_history: list[dict[str,object]] =[]
+        self.metric_path = self.run_dir / "metrics.json"
+        self.writer = SummaryWriter(log_dir=self.tb_dir)
+        self.episode_history: list[dict[str, object]] = []
 
-
-    def log_episode(self, metrics: EpisodeMetrics,optim_metrics: OptimizationMetrics | None = None,) -> None:
+    def log_episode(
+        self,
+        metrics: EpisodeMetrics,
+        optim_metrics: OptimizationMetrics | None = None,
+    ) -> None:
 
         loss_str = (
             f"{metrics.latest_loss:.4f}"
@@ -70,15 +70,15 @@ class DQNLogger:
                 f"{q_str}"
             )
         self.episode_history.append(metric_as_dict(metrics))
-        self.writer.add_scalar("train/steps",metrics.steps,metrics.episode)
-        self.writer.add_scalar("agent/epsilon",metrics.epsilon,metrics.episode)
+        self.writer.add_scalar("train/steps", metrics.steps, metrics.episode)
+        self.writer.add_scalar("agent/epsilon", metrics.epsilon, metrics.episode)
         self.writer.add_scalars(
             "train/behavior",
-        {
-            "success_rate": metrics.success_rate,
-            "rolling_success": metrics.rolling_success,
-        },
-             metrics.episode,
+            {
+                "success_rate": metrics.success_rate,
+                "rolling_success": metrics.rolling_success,
+            },
+            metrics.episode,
         )
         self.writer.add_scalars(
             "train/returns",
@@ -100,16 +100,20 @@ class DQNLogger:
             metrics.episode,
         )
 
-
     def log_optimization(
         self,
         metrics: OptimizationMetrics,
     ) -> None:
 
-       
-        self.writer.add_scalar("optimization/td_loss",metrics.td_loss,metrics.optimization_step)
-        self.writer.add_scalar("target/parameter_gap",metrics.parameter_gap,metrics.optimization_step)
-        self.writer.add_scalar("target/synched",int(metrics.target_synced),metrics.optimization_step)
+        self.writer.add_scalar(
+            "optimization/td_loss", metrics.td_loss, metrics.optimization_step
+        )
+        self.writer.add_scalar(
+            "target/parameter_gap", metrics.parameter_gap, metrics.optimization_step
+        )
+        self.writer.add_scalar(
+            "target/synched", int(metrics.target_synced), metrics.optimization_step
+        )
         self.writer.add_scalars(
             "optimization/q_values",
             {
@@ -119,7 +123,6 @@ class DQNLogger:
             },
             metrics.optimization_step,
         )
-
 
     def log_validation(self, episode, result):
         self.writer.add_scalar(
@@ -163,19 +166,14 @@ class DQNLogger:
             self.checkpoint_path,
         )
 
-    def build_payload(self)-> dict[str,object]:
+    def build_payload(self) -> dict[str, object]:
         return {
-            "config":self.config,
-            "episodes": self.episode_history,            
+            "config": self.config,
+            "episodes": self.episode_history,
         }
 
-
-    
     def close(self) -> None:
-        payload=self.build_payload()
-        save_json(self.metric_path,payload)
+        payload = self.build_payload()
+        save_json(self.metric_path, payload)
         self.writer.flush()
         self.writer.close()
-
-
-    

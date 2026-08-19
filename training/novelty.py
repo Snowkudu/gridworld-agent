@@ -1,7 +1,7 @@
 # training/novelty.py
 
-import math
 import random
+
 
 def novelty_base(visit_count: int, decay_power: float = 0.5) -> float:
     """Return intrinsic novelty for a state-action pair.
@@ -45,17 +45,14 @@ def novelty_sched(
 
     return beta_max * (raw / max_raw)
 
+
 def novelty_action(
     env,
     state_key,
     visit_counts,
     decay_power=1.0,
 ):
-    legal_actions = [
-        action
-        for action in range(4)
-        if env.is_legal(action)
-    ]
+    legal_actions = [action for action in range(4) if env.is_legal(action)]
 
     weights = [
         novelty_base(

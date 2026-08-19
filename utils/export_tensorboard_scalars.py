@@ -13,6 +13,7 @@ PLOT_EXCLUDE = {
     "target/synched",
 }
 
+
 def find_run_dirs(log_dir: Path) -> list[Path]:
     """Return every directory beneath log_dir containing TensorBoard event files."""
     event_files = log_dir.rglob("events.out.tfevents*")
@@ -44,10 +45,7 @@ def load_run(run_dir: Path) -> dict[str, list]:
 
     available_tags = accumulator.Tags().get("scalars", [])
 
-    return {
-        tag: deduplicate_events(accumulator.Scalars(tag))
-        for tag in available_tags
-    }
+    return {tag: deduplicate_events(accumulator.Scalars(tag)) for tag in available_tags}
 
 
 def export_all_scalars(
@@ -162,12 +160,7 @@ def export_all_plots(
 ) -> None:
     """Discover every scalar tag and automatically generate its plot."""
     tags = sorted(
-        {
-            tag
-            for scalars in runs.values()
-            for tag in scalars
-            if tag not in PLOT_EXCLUDE
-        }
+        {tag for scalars in runs.values() for tag in scalars if tag not in PLOT_EXCLUDE}
     )
 
     for tag in tags:
