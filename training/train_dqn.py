@@ -110,7 +110,7 @@ def train_dqn(config: dict) -> DQNAgent:
         target_sync_interval=dqn_config["target_sync_interval"],
         device=device,
     )
-    transfer_config = config.get("transfer", {})
+    transfer_config = training_config.get("transfer", {})
 
     if transfer_config.get("enabled", False):
         print(f"[TRANSFER] loaded backbone from {transfer_config['checkpoint']}")

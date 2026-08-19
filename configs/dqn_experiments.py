@@ -230,7 +230,11 @@ P5_STORY_CONFIGS = [
             },
             "transfer": {
                 "enabled": True,
-                "checkpoint": ("artifacts/p4_cnn/cnn_transfer_128_128_baseline.pt"),
+                "checkpoint": (
+                    "artifacts/p4_cnn/transfer/"
+                    "cnn_transfer_128_128_baseline/"
+                    "checkpoint.pt"
+                ),
                 "freeze": True,
             },
         },
