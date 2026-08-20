@@ -6,6 +6,12 @@ What began as an MLP → CNN → DQN progression increasingly became an evaluati
 
 The final DQN-family policy is a **competent small-world controller rather than a general navigator**. That limitation is preserved rather than hidden behind stronger tooling such as action masking, memory, or explicit planning.
 
+## Live demo
+
+**[Open GridWorld Lab](https://snowkudu.github.io/gridworld-agent/)**
+
+The P6 demo runs the frozen-transfer DDQN entirely in the browser through ONNX Runtime Web. Explore mode supports single policy steps, autonomous rollouts, four world tiers, and seeded random worlds. Project Story summarizes the MLP → CNN → DDQN progression beside one representative W15 replay; it does not download or execute the historical MLP and CNN models.
+
 ---
 
 ## Project story
@@ -17,7 +23,7 @@ The final DQN-family policy is a **competent small-world controller rather than 
 | **P3** | Does offline classification accuracy survive closed-loop control? | Mostly no; repeated mistakes compound into softlocks and timeouts |
 | **P4** | Does spatial representation improve the policy? | A 3-channel CNN substantially improves autonomous control and exposes deterministic deadlocks more clearly |
 | **P5** | Can a relatively blind DQN learn robust navigation from interaction? | Strong bounded-grid competence, but a brittle long-horizon Q-policy and poor scaling to harder worlds |
-| **P6** | Can the whole project be understood quickly without reading the experiment history? | Interactive UX / demo phase |
+| **P6** | Can the whole project be understood quickly without reading the experiment history? | Static browser demo with live ONNX inference and a compact project story |
 
 ---
 
@@ -251,4 +257,4 @@ The project intentionally stops at that boundary rather than continuing to add s
 - [x] **P3** — closed-loop evaluation
 - [x] **P4** — spatial CNN policy
 - [x] **P5** — DQN/DDQN, robustness evaluation, and transfer analysis
-- [ ] **P6** — interactive UX / demo
+- [x] **P6** — interactive browser demo and GitHub Pages deployment

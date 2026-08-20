@@ -26,7 +26,7 @@ def load_export_model(
 
     config = checkpoint.get("config")
     if not isinstance(config, dict):
-        raise ValueError(f"Checkpoint {checkpoint_path} does not contain 'config'.")
+        raise TypeError(f"Checkpoint {checkpoint_path} does not contain 'config'.")
 
     if "model_state_dict" in checkpoint:
         model_config = config
@@ -122,9 +122,7 @@ def main() -> None:
             "name": "grid",
             "shape": [1, input_ch, height, width],
             "dtype": "float32",
-            "channels": (
-                ["obstacles", "agent", "goal"] if input_ch == 3 else ["grid"]
-            ),
+            "channels": (["obstacles", "agent", "goal"] if input_ch == 3 else ["grid"]),
         },
         "output": {
             "name": "logits",
