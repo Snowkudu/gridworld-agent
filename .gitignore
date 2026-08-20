@@ -39,6 +39,10 @@ results/p3_eval/fc*_ds*_es*.json
 
 artifacts/p5_dqn/
 
+web/node_modules/
+web/dist/
+artifacts/p6_web/
+
 # Keep the directory in Git
 !data/raw/.gitkeep
 !data/models/.gitkeep

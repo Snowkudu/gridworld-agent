@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A browser-based demonstration of the GridWorld ML/RL project."
+    />
+    <title>GridWorld Lab</title>
+  </head>
+  <body>
+    <main class="lab-shell">
+      <header class="lab-header">
+        <div>
+          <p class="eyebrow">P6 · Browser runtime check</p>
+          <h1>GridWorld Lab</h1>
+        </div>
+        <div class="runtime-status" aria-live="polite">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status-text">Waiting to load the model</span>
+        </div>
+      </header>
+
+      <section class="workspace" aria-label="Browser inference workspace">
+        <article class="grid-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Input</p>
+              <h2>3-channel observation</h2>
+            </div>
+            <span class="shape-badge">1 × 3 × 10 × 10</span>
+          </div>
+          <div id="grid" class="grid" aria-label="Ten by ten GridWorld"></div>
+          <div class="legend" aria-label="Grid legend">
+            <span><i class="legend-swatch agent"></i>Agent</span>
+            <span><i class="legend-swatch goal"></i>Goal</span>
+            <span><i class="legend-swatch obstacle"></i>Obstacle</span>
+          </div>
+        </article>
+
+        <article class="inference-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Output</p>
+              <h2>Policy decision</h2>
+            </div>
+            <span id="model-type" class="shape-badge">Not loaded</span>
+          </div>
+
+          <div id="q-values" class="q-values" aria-live="polite"></div>
+
+          <label class="field" for="previous-action">
+            <span>Previous action</span>
+            <select id="previous-action">
+              <option value="">None</option>
+              <option value="0">Up</option>
+              <option value="1">Down</option>
+              <option value="2">Left</option>
+              <option value="3">Right</option>
+            </select>
+          </label>
+
+          <div class="decision-card">
+            <span>Selected action</span>
+            <strong id="selected-action">—</strong>
+            <small id="decision-note">Load the model to run inference.</small>
+          </div>
+
+          <button id="run-check" class="primary-button" type="button">
+            Run browser inference
+          </button>
+        </article>
+      </section>
+
+      <p id="error-message" class="error-message" role="alert" hidden></p>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

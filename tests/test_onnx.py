@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 
 import numpy as np
 import onnxruntime as ort
+import pytest
 import torch
 
-from models.checkpoint import build_model_from_config, load_model_from_checkpoint
+from models.checkpoint import build_model_from_config
 
 
-def test_onnx_export_matches_pytorch(tmp_path) -> None:
+@pytest.mark.parametrize("checkpoint_type", ["supervised", "dqn"])
+def test_onnx_export_matches_pytorch(tmp_path, checkpoint_type: str) -> None:
     config = {
         "model_type": "cnn",
         "input_ch": 3,
@@ -28,14 +31,29 @@ def test_onnx_export_matches_pytorch(tmp_path) -> None:
 
     checkpoint_path = tmp_path / "checkpoint.pt"
     onnx_path = tmp_path / "model.onnx"
+    manifest_path = tmp_path / "model.json"
 
-    torch.save(
-        {
+    if checkpoint_type == "supervised":
+        checkpoint = {
             "config": config,
             "model_state_dict": original_model.state_dict(),
-        },
-        checkpoint_path,
-    )
+        }
+    else:
+        checkpoint = {
+            "config": {
+                "cnn": config,
+                "dqn": {},
+                "training": {
+                    "inertia": {
+                        "enabled": True,
+                        "strength": 0.75,
+                    }
+                },
+            },
+            "online_state_dict": original_model.state_dict(),
+        }
+
+    torch.save(checkpoint, checkpoint_path)
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
@@ -58,11 +76,19 @@ def test_onnx_export_matches_pytorch(tmp_path) -> None:
 
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert onnx_path.exists()
+    assert manifest_path.exists()
 
-    restored_model, _ = load_model_from_checkpoint(
-        checkpoint_path,
-        torch.device("cpu"),
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["checkpoint_type"] == (
+        "supervised" if checkpoint_type == "supervised" else "dqn-online"
     )
+    assert manifest["input"]["shape"] == [1, 3, 10, 10]
+    assert manifest["input"]["channels"] == ["obstacles", "agent", "goal"]
+    assert manifest["output"]["actions"] == ["up", "down", "left", "right"]
+    assert manifest["policy"]["inertia"] == {
+        "enabled": checkpoint_type == "dqn",
+        "strength": 0.75 if checkpoint_type == "dqn" else 0.0,
+    }
 
     x = torch.randn(
         1,
@@ -73,7 +99,7 @@ def test_onnx_export_matches_pytorch(tmp_path) -> None:
     )
 
     with torch.no_grad():
-        torch_logits = restored_model(x).numpy()
+        torch_logits = original_model(x).numpy()
 
     session = ort.InferenceSession(
         str(onnx_path),
